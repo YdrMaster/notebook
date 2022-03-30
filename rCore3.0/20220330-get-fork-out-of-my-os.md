@@ -1,6 +1,6 @@
 ﻿# A `fork()` in the road
 
-[原文链接](https://www.microsoft.com/en-us/research/uploads/prod/2019/04/fork-hotos19.pdf)
+[原文](https://www.microsoft.com/en-us/research/uploads/prod/2019/04/fork-hotos19.pdf)
 
 ## 作者
 
@@ -90,7 +90,7 @@ The TENEX operating system \[18\] yields a notable counter-example to the Unix a
 
 Unix fork was not a necessary “inevitability” \[61\]. It was an expedient PDP-7 implementation shortcut that, for 50 years, has pervaded modern OSes and applications.
 
-*Unix* `fork` 并不是一种必要的“必然性”[61](#61)。它是一种权宜的 *PDP-7* 实现捷径，50 年来，它已经遍及现代操作系统和应用程序。
+*Unix* `fork` 并不是一种必要的“必然性”（[61](#61)）。它是一种权宜的 *PDP-7* 实现捷径，50 年来，它已经遍及现代操作系统和应用程序。
 
 ## 3 `fork` *API* 的优点
 
@@ -299,37 +299,3 @@ Fork isn’t thread-safe. Unix processes today support threads, but a child crea
 ### 81
 
 ### 82
-
-### 83
-
-### 84
-
-### 85
-
-### 86
-
-### 87
-
-### 88
-
-### 89
-
-### 90
-
-### 91
-
-### 92
-
-### 93
-
-### 94
-
-### 95
-
-### 96
-
-### 97
-
-### 98
-
-### 99
