@@ -25,7 +25,7 @@ ACM ISBN 978-1-4503-6727-1/19/05. . . $15.00
 - [引言](#1-引言)
 - [历史： `fork` 始于一个技巧](#2-历史：fork-始于一个技巧)
 - [`fork` *API* 的优点](#3-fork-api-的优点)
-- [在新时代的 `fork`](#4-在新时代的-fork)
+- [新时代背景下的 `fork`](#4-新时代背景下的-fork)
 - [实现 `fork`](#5-实现-fork)
 - [去除 `fork`](#6-去除-fork)
 - [`fork` 滚出我的操作系统！](#7-fork-滚出我的操作系统)
@@ -56,7 +56,7 @@ When the designers of Unix needed a mechanism to create processes, they added a 
 
 Our goal is to set the record straight. Fork is an anachronism: a relic from another era that is out of place in modern systems where it has a pernicious and detrimental impact. As a community, our familiarity with fork can blind us to its faults (§4). Generally acknowledged problems with fork include that it is not thread-safe, it is inefficient and unscalable, and it introduces security concerns. Beyond these limitations, fork has lost its classic simplicity; it today impacts all the other operating system abstractions with which it was once orthogonal. Moreover, a fundamental challenge with fork is that, since it conflates the process and the address space in which it runs, fork is hostile to user-mode implementation of OS functionality, breaking everything from buffered IO to kernel-bypass networking. Perhaps most problematically, fork doesn’t compose—every layer of a system from the kernel to the smallest user-mode library must support it.
 
-我们的目标是要澄清事实。`fork` 是一个不合时宜的东西：一个来自另一个时代、不适应现代系统的遗物，有害无益，影响恶劣。作为一个社区，我们对 `fork` 的熟悉程度会使我们对它的缺点视而不见（[§4](#4-在新时代的分岔)）。`fork` 公认的问题包括：不是线程安全的、低效且不可扩展，而且它引入了安全问题。除了这些限制之外，`fork` 已经失去了其经典的简单性；今天，它影响了曾经与它正交的所有其他操作系统抽象。此外，`fork` 面临的一个重大挑战是，由于混淆了进程和进程所运行的地址空间，它对操作系统功能的用户模式实现是不利的，破坏了从缓冲 IO 到内核旁路网络的一切。也许最麻烦的是，`fork` 不能组合——从内核到最小的用户态库，系统的每一层都必须支持它。
+我们的目标是要澄清事实。`fork` 是一个不合时宜的东西：一个来自另一个时代、不适应现代系统的遗物，有害无益，影响恶劣。作为一个社区，我们对 `fork` 的熟悉程度会使我们对它的缺点视而不见（[§4](#4-新时代背景下的-fork)）。`fork` 公认的问题包括：不是线程安全的、低效且不可扩展，而且它引入了安全问题。除了这些限制之外，`fork` 已经失去了其经典的简单性；今天，它影响了曾经与它正交的所有其他操作系统抽象。此外，`fork` 面临的一个重大挑战是，由于混淆了进程和进程所运行的地址空间，它对操作系统功能的用户模式实现是不利的，破坏了从缓冲 IO 到内核旁路网络的一切。也许最麻烦的是，`fork` 不能组合——从内核到最小的用户态库，系统的每一层都必须支持它。
 
 We illustrate the havoc fork wreaks on OS implementations using our experiences with prior research systems (§5). Fork limits the ability of OS researchers and developers to innovate because any new abstraction must be special-cased for it. Systems that support fork and exec efficiently are forced to duplicate per-process state lazily. This encourages the centralisation of state, a major problem for systems not structured using monolithic kernels. On the other hand, research systems that avoid implementing fork are unable to run the enormous body of software that uses it.
 
@@ -110,7 +110,7 @@ Fork eased concurrency. In the days before threads or asynchronous IO, fork with
 
 **`fork` 简化了并发**。在没有线程或异步 IO 的时代，`fork` 但不 `exec` 实现了一种有效的并发形式。在动态库出现之前，它提供了一种简单形式的代码重用。一个程序可以初始化，解析其配置文件，然后派生多个自身的副本，这些副本运行来自同一二进制文件的不同功能或处理不同的输入。这种设计存在于预分叉服务器中；我们将在 [§6](#6-去除-fork) 中回到这个问题。
 
-## 4 在新时代的 `fork`
+## 4 新时代背景下的 `fork`
 
 At first glance, fork still seems simple. We argue that this is a deceptive myth, and that fork’s effects cause modern applications more harm than good.
 
@@ -128,7 +128,59 @@ Fork isn’t thread-safe. Unix processes today support threads, but a child crea
 
 **`fork` 不是线程安全的**。如今 *Unix* 进程支持线程，但由 `fork` 创建的子进程只有一个线程（调用线程的副本）。除非父进程对其其他线程进行 `fork` 序列化，否则子进程的地址空间作为父进程的快照，可能与父进程不一致。一个简单但常见的情况是，一个线程在做内存分配并锁定一个堆锁，而另一个线程则 `fork` 了。任何试图在子进程中分配内存的行为（从而请求相同的锁）都会立即死锁，等待永远不会发生的解锁操作。
 
+Programming guides advise not using fork in a multithreaded process, or calling exec immediately afterwards \[64, 76, 77\]. POSIX only guarantees that a small list of “asyncsignal-safe” functions can be used between fork and exec, notably excluding malloc() and anything else in standard libraries that may allocate memory or acquire locks. Real multi-threaded programs that fork are plagued by bugs arising from the practice \[24–26, 66\].
+
+编程指南建议不要在多线程进程中使用 `fork`，或在之后立即调用 `exec`（[64](#64)、[76](#76)、[77](#77)）。*POSIX* 只保证可以在 `fork` 和 `exec` 之间使用一小部分“异步信号安全”的函数，特别是不包括 `malloc()` 和标准库中任何可能分配内存或获取锁的其他函数。真正的多线程程序在 `fork` 的时候会被这种做法产生的 bug 所困扰（[24](#24)、[25](#25)、[26](#26)、[66](#66)）。
+
+It is hard to imagine a new proposed syscall with these properties being accepted by any sane kernel maintainer.
+
+很难想象任何理智的内核维护者会接受一个新提议的具有这些属性的系统调用。
+
+Fork is insecure. By default, a forked child inherits everything from its parent, and the programmer is responsible for explicitly removing state that the child does not need by: closing file descriptors (or marking them as close-on-exec), scrubbing secrets from memory, isolating namespaces using unshare() [52], etc. From a security perspective, the inheritby-default behaviour of fork violates the principle of least privilege. Furthermore, programs that fork but don’t exec render address-space layout randomisation ineffective, since each process has the same memory layout [17].
+
+**`fork` 是不安全的**。默认情况下，`fork` 的子进程继承父进程的一切，程序员负责通过以下方式显式删除子代不需要的状态：关闭文件描述符（或将其标记为 `exec` 时关闭），从内存中清除机密，使用 `unshare()` 隔离命名空间（[52](#52)）等。从安全角度来看，`fork` 的默认继承行为违反了最小特权原则。此外，`fork` 但不 `exec` 的程序使地址空间布局随机化失效，因为每个进程都有相同的内存布局（[17](#17)）。
+
+Fork is slow. In the decades since Thompson first implemented fork, memory size and relative access cost have grown continuously. Even by 1979 (when the third BSD Unix introduced vfork() \[15\]) fork was seen as a performance problem, and only copy-on-write techniques \[3, 72\] kept its performance acceptable. Today, even the time to establish copy-on-write mappings is a problem: Chrome experiences delays of up to 100 ms in fork \[28\], and Node.js applications can be blocked for seconds while forking prior to exec \[56\].
+
+**`fork` 很慢**。在 *Thompson* 首次实现 `fork` 之后的几十年里，内存大小和相对访问成本不断增长。即使到了 1979 年（当第三个 *BSD Unix* 引入 `vfork()`（[15](#15)）时），`fork` 也被看作是一个性能问题，只有写时复制技术（[3](#3)、[72](#72)）使其性能可以接受。今天，甚至建立写时复制映射的时间也是一个问题：*Chrome* 浏览器在 `fork` 中经历了高达 100 毫秒的延迟（[28](#28)），而 *Node.js* 应用程序在 `exec` 之前进行 `fork` 时可能被阻塞数秒（[56](#56)）。
+
+Fork is now such a performance liability that C libraries carefully avoid its use in posix_spawn() \[34, 38\], and Solaris implements spawn as a native system call \[32\]. However, as long as applications continue to call fork directly, they pay a high price. Figure 1 plots the time to fork and exec from a process of varying size under Ubuntu 16.04.3 on an Intel i7- 6850K CPU at 3.6 GHz. The dirty line shows the cost of forking a process with dirty pages, which must be downgraded to read-only for copy-on-write mappings. In the fragmented case, the parent dirties only its stack, but simulates memory layout in a complex application using shared libraries, address space randomisation, and just-in-time compilation, by allocating alternating read-only and read-write pages. By contrast, posix_spawn() takes the same time (around 0.5 ms) regardless of the parent’s size or memory layout.
+
+`fork` 现在是一个性能上的负担，以至于 C 语言库谨慎地避免在 `posix_spawn()` 中使用它（[34](#34)、[38](#38)），*Solaris* 将 `spawn` 作为一个原生系统调用来实现（[32](#32)）。然而，只要应用程序继续直接调用 `fork`，就会付出高昂的代价。图 1 描绘了在 *Ubuntu 16.04.3* 下，在 3.6GHz 的 *Intel i7-6850K CPU* 上，从一个不同规模的进程中 `fork` 和 `exec` 的时间。`dirty` 线显示了 `fork` 一个带有脏页的进程的成本，为了进行写时复制映射，这些脏页必须写回，以降级为只读。在段模式下，父进程只弄脏了它的堆栈，但是通过交替分配只读页和读写页，模拟了一个使用共享库、地址空间随机化和即时编译的复杂应用程序的内存布局。相比之下，`posix_spawn()` 只需要固定的时间（大约 0.5 毫秒），无论父进程的大小或内存布局如何。
+
+Fork doesn’t scale. In Linux, the memory management operations needed to setup fork’s copy-on-write mappings are known to hurt scalability \[22, 82\], but the true problem lies deeper: as Clements et al. \[29\] observed, the mere specification of the fork API introduces a bottleneck, because (unlike spawn) it fails to commute with other operations on the process. Other factors further impede a scalable implementation of fork. Intuitively, the way to make a system scale is to avoid needless sharing. A forked process starts sharing everything with its parent. Since fork duplicates every aspect of a process’s OS state, it encourages centralisation of that state in a monolithic kernel where it is cheap to copy and/or reference count. This then makes it hard to implement, e.g., kernel compartmentalisation for security or reliability.
+
+**`fork` 不可扩展**。在 *Linux* 中，设置 `fork` 的写时复制映射所需的内存管理操作已知会损害可扩展性（[22](#22)、[82](#82)），但真正的问题在于更深层次：正如 *Clements* 等人（[29](#29)）所观察到的，仅仅是 `fork` *API* 的规范就引入了一个瓶颈，因为（与 `spawn` 不同）它不能与进程上的其他操作相交换。其他因素进一步阻碍了 `fork` 的可扩展实现。直观地说，扩展系统的方法是避免无谓的共享。一个 `fork` 的进程一开始就与它的父进程共享一切。由于 `fork` 复制了进程的操作系统状态的每一个方面，它鼓励在一个宏内核中集中该状态，在那里复制和/或引用计数成本较低。这使其难以实现，例如，为了安全或可靠性而进行的内核模块化。
+
+Fork encourages memory overcommit. The implementer of fork faces a difficult choice when accounting for memory used by copy-on-write page mappings. Each such page represents a potential allocation—if any copy of the page is modified, a new page of physical memory will be needed to resolve the page fault. A conservative implementation therefore fails the fork call unless there is sufficient backing store to satisfy all potential copy-on-write faults \[55\]. However, when a large process performs fork and exec, many copy-on-write page mappings are created but never modified, particularly if the exec’ed child is small, and having fork fail because the worst-case allocation (double the virtual size of the process) could not be satisfied is undesirable.
+
+**`fork` 鼓励内存过度投入**。`fork` 的实现者在统计写时拷贝页映射所使用的内存时面临着一个艰难的抉择。每个这样的页面都代表一个潜在的分配--如果该页面的任何副本被修改，将需要一个新的物理内存页面来解决缺页异常。因此，除非有足够的空闲空间来满足所有潜在的写时拷贝异常，否则一个保守的实现会令 `fork` 调用失败（[55](#55)）。然而，当大型进程执行 `fork` 和 `exec` 时会创建许多写时拷贝页映射，但可能永不会修改，特别是当被执行的子进程很小的时候，由于最坏情况下的分配（进程虚拟大小的两倍）不能被满足而导致 `fork` 失败是不合理的。
+
+An alternative approach, and the default on Linux, is to overcommit virtual memory: operations that establish virtual address mappings, which includes fork’s copy-on-write clone of an address space, succeed immediately regardless of whether sufficient backing store exists. A subsequent page fault (e.g. a write to a forked page) can fail to allocate required memory, invoking the heuristic-based “out-of-memory killer” to terminate processes and free up memory.
+
+另一种实现，即 *Linux* 上的默认实现，是过度承诺虚拟内存：建立虚拟地址映射的操作，包括 `fork` 对地址空间的写时复制，不管是否存在足够的空闲空间都会立即成功。随后的缺页异常（例如，对 `fork` 页的写入）可能无法分配所需的内存，则调用基于启发式的“内存不足杀手”来终止进程并释放内存。
+
+To be clear, Unix does not require overcommit, but we argue that the widespread use of copy-on-write fork (rather than a spawn-like facility) strongly encourages it. Real applications are unprepared to handle apparently-spurious out-ofmemory errors in fork \[27, 37, 57\]. Redis, which uses fork for persistence, explicitly advises against disabling memory overcommit \[67\]; otherwise, Redis would have to be restricted to only half the total virtual memory to avoid the risk of being killed in an out-of-memory situation.
+
+明确地说，*Unix* 并不要求这种过度承诺，但我们认为写时复制 `fork`（而不是类似 `spawn` 的设施）的广泛使用强烈地鼓励了它。真正的应用程序没有准备好处理 `fork` 中明显虚假的内存不足错误（[27](#27)、[37](#37)、[57](#57)）。*Redis* 使用 `fork` 进行持久化，明确建议不要禁用内存过度承诺（[67](#67)）；否则，*Redis* 将不得不被限制在总虚拟内存的一半，以避免在内存不足的情况下被杀死。
+
+Summary. Fork today is a convenient API for a singlethreaded process with a small memory footprint and simple memory layout that requires fine-grained control over the execution environment of its children but does not need to be strongly isolated from them. In other words, a shell. It’s no surprise that the Unix shell was the first program to fork \[69\], nor that defenders of fork point to shells as the prime example of its elegance \[4, 7\]. However, most modern programs are not shells. Is it still a good idea to optimise the OS API for the shell’s convenience?
+
+**总结**。如果满足这些条件，今天的 `fork` 仍是一个方便的 *API*：内存占用小，内存布局简单，需要对其子进程的执行环境进行细粒度的控制，但不需要与它们强隔离的单线程进程。换句话说，一个 *shell*。毫不奇怪，*Unix shell* 是第一个应用 `fork` 的程序（[69](#69)），`fork` 的捍卫者也将 *shell* 作为其优雅性的主要例子（[4](#4)、[7](#7)）。然而，大多数现代程序都不是 *shell*。为了 *shell* 的方便而“优化”操作系统的 *API*，这能是一个好主意吗？
+
 ## 5 实现 `fork`
+
+While it is hard to quantify the cost of implementing fork on existing systems, there is clear evidence that supporting fork limits changes in OS architecture, and restricts the ability of OSes to adapt with hardware evolution.
+
+虽然很难量化在现有系统上实现 `fork` 的成本，但有明确的证据表明，支持 `fork` 限制了操作系统架构的变化，并限制了操作系统适应硬件演进的能力。
+
+Fork is incompatible with a single address space. Many modern contexts restrict execution to a single address space, including picoprocesses \[42\], unikernels \[53\], and enclaves \[14\]. Despite the fact that a much larger community of OS researchers work with and on Unix systems, researchers working with systems not based on fork have had a much easier time adapting them to these environments.
+
+**`fork` 与单一地址空间是不相容的**。许多现代环境将（进程）执行限制在单一的地址空间，包括 *picoprocesses*（[42](#42)）、*unikernels*（[53](#53)）和 *enclaves*（[14](#14)）。尽管有更多的操作系统研究人员在 *Unix* 系统上工作，但在不基于 `fork` 的系统上工作的研究人员更容易适应这些环境。
+
+For example, the Drawbridge libOS \[65\] implements a binary-compatible Windows runtime environment within an isolated user-mode address space, known as a picoprocess. Drawbridge supports multiple “virtual processes” within the same shared address space; CreateProcess() is implemented by loading the new binary and libraries in a different portion of the address space, and then creating a separate thread to begin execution of the child, while ensuring crossprocess system calls function as expected. Needless to say, there is no security isolation between these processes—the meaningful security boundary is the host picoprocess. However, this model has been used, for example, to support a full multi-process Windows environment inside an SGX enclave \[14\], enabling complex applications that involve multiple processes and programs to be deployed in an enclave.
+
+例如，*Drawbridge libOS*（[65](#65)）在单个隔离的用户态地址空间内实现了二进制兼容的 *Windows* 运行环境，称为 *picoprocess*。*Drawbridge* 支持同一共享地址空间内的多个“虚拟进程”；`CreateProcess()` 是通过在地址空间的不同部分加载新的二进制文件和库来实现的，然后创建一个单独的线程并开始执行子进程，同时确保跨进程的系统调用如期进行。不用说，这些进程之间没有安全隔离--有意义的安全边界是宿主系统的 *picoprocess*。然而，这个模型已经被用来支持 *SGX enclave* 内的一个完整的多进程 *Windows* 环境（[14](#14)），使涉及多个进程和程序的复杂应用能够被部署在 *enclave* 内。
 
 ## 6 去除 `fork`
 
