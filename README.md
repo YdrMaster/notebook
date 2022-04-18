@@ -10,3 +10,4 @@
     - [`oreboot` 引导](zCore/oreboot/20220415-summary.md)
   - [笔记](zCore/note)
     - [`zCore` 与 `rCore(v3)` 内存布局的区别](zCore/note/20220418-difference-of-memory-between-zcore-and-rcore-v3/doc.md)
+    - [【翻译】RISCV 特权级规范-寻址及内存保护](zCore/note/20220418-translation/doc.md)
