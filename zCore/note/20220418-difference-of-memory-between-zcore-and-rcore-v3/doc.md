@@ -1,12 +1,20 @@
 ﻿# `zCore` 与 `rCore(v3)` 内存布局的区别
 
-[`rCore-Tutorial-v3` 第四章](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter4/5kernel-app-spaces.html) 介绍了 `rCore` 内核地址空间的布局：
+## 目录
+
+- [正文](#正文)
+- [参考资料](#参考资料)
+- [鸣谢](#鸣谢)
+
+## 正文
+
+`rCore` 教程第三版第四章（[#1](#参考资料)）介绍了 `rCore` 内核地址空间的布局：
 
 ![低 256GiB](kernel-as-low.png)
 
 ![高 256GiB](kernel-as-high.png)
 
-`rCore(v3)` 内核的四个全局逻辑段 `.text/.rodata/.data/.bss` 恒等映射到物理地址，其他部分也按确定的方式分布。这样做的好处有：
+依此设计，内核的四个全局逻辑段 `.text/.rodata/.data/.bss` 恒等映射到物理地址，其他部分也按确定的方式分布。这样做的好处有：
 
 1. 结构清晰
 
@@ -22,8 +30,26 @@
 
 4. 内核与用户进程全隔离
 
-   内核空间在用户态看来完全不存在，因此即使硬件存在旁路漏洞也无法从用户态窥探内核内存布局。参考[`wikipedia`](https://zh.wikipedia.org/wiki/%E5%86%85%E6%A0%B8%E9%A1%B5%E8%A1%A8%E9%9A%94%E7%A6%BB)。
+   内核空间在用户态看来完全不存在，因此即使硬件存在旁路漏洞也无法从用户态窥探内核内存布局。[#3](#参考资料) 介绍了隔离带来的安全性好处。
 
-然而，隔离的内核页表也带来一个重大的缺点，就是每次陷入内核都需要切换整个页表，性能比较差。因此，`zCore` 采用不隔离的内核页表，即用户进程的页表中包含整个内核页表的映射，通过页表项上的标志位保护访问。这样陷入内核时自然可以访问内核的地址空间，不需要刷新页表，具有更好的性能。
+然而，隔离的内核页表也带来一个重大的缺点，就是每次陷入内核都需要切换整个页表，性能比较差。因此，`zCore` 采用不隔离的内核页表，即用户进程的页表中包含整个内核页表的映射，通过页表项上的标志位保护访问。这样陷入内核时自然可以访问内核的地址空间，不需要刷新页表，具有更好的性能。这个设计来源于 `rCore` 教程第二版，[#2](#参考资料) 介绍了细节。
 
 `zCore` 在 riscv64 架构 + Sv39 方案下采取的具体措施是将内核的物理地址映射到偏移 0xffff_ffff_0000_0000 的虚拟地址，即把整个物理地址空间映射到 Sv39 的高 256GiB 空间。内核需要的空间本来就不大，这样设计不会导致什么问题。应用程序可以知道内核的内存布局，只靠页表标志位实现访问保护。
+
+## 参考资料
+
+1. [`rCore-Tutorial-v3`](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter4/5kernel-app-spaces.html#id6)
+
+   本节介绍了全隔离的内核页表设计。
+
+2. [`rCore-Tutorial-v2`](https://rcore-os.github.io/rCore_tutorial_doc/chapter5/part2.html)
+
+   本节介绍了不隔离的内核页表设计。
+
+3. [`wikipedia`-内核页表隔离](https://zh.wikipedia.org/wiki/%E5%86%85%E6%A0%B8%E9%A1%B5%E8%A1%A8%E9%9A%94%E7%A6%BB)
+
+   本词条介绍了用于防止旁路攻击的内核页表隔离技术。
+
+## 鸣谢
+
+感谢清华的 [CY](https://github.com/chyyuu)、ZYR 和 [XLY](https://github.com/elliott10) 为我提供的帮助。
