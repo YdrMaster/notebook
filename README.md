@@ -15,3 +15,4 @@
 
 - [咨询记录](consult-journal)
   - [洛佳](consult-journal/LuoJia.md)
+  - [ZYR](consult-journal/ZYR.md)
