@@ -19,8 +19,11 @@
   - 20220423-[学习 D1 SPL 软件](oreboot/20220423-d1-spl.md)
   - 20220427-[采购 D1-S 群友自制开发板](oreboot/20220427-d1-board/doc.md)
   - 20220423-[在 WSL2 上调试 D1 开发板](oreboot/20220524-d1-wsl2.md)
+  - 20220528-[对启动流程的全面理解](oreboot/20220528-boot.md)
+  - 20220528-[利用可编程的 SRAM 实现超级加速](oreboot/20220528-sram.md)
 
 - [设备树](device-tree)
+  - 20220528-[讨论设备树解析的写法](device-tree/20220528-device-tree.md)
   - 20220528-[【翻译】设备树规范](device-tree/20220528-translation-devicetree/doc.md)
 
 - [咨询记录](consult-journal)

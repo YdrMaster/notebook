@@ -5,3 +5,4 @@
 - 20220515-[修正及重构 rustsbi-qemu](20220515-rustsbi.md)
 - 20220516-[讨论修改 rustabi-qemu](20220516-rustsbi.md)
 - 20220528-[讨论设备树解析的写法](../device-tree/20220528-device-tree.md)
+- 20220528-[利用可编程的 SRAM 实现超级加速](../oreboot/20220528-sram.md)
