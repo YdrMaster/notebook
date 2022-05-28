@@ -13,6 +13,7 @@
     - 20220418-[【翻译】RISCV 特权级规范-寻址及内存保护](zCore/note/20220418-translation/doc.md)
     - 20220423-[学习 D1 SPL 软件](zCore/note/20220423-d1-spl.md)
     - 20220509-[【翻译】SBI 规范](zCore/note/20220509-translation-riscv-sbi/toc.md)
+    - 20220528-[【翻译】设备树规范](zCore/note/20220528-translation-devicetree/doc.md)
 
 - [咨询记录](consult-journal)
   - [洛佳](consult-journal/LuoJia.md)
