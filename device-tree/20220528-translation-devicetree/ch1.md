@@ -36,12 +36,12 @@
 
 > Organization of this Document
 
-> - 第一章介绍了 DTSpec 所指定的架构。
-> - 第二章介绍了设备树的概念，并描述了其逻辑结构和标准属性。
-> - 第三章规定了符合 DTSpec 的设备树所需的基本设备节点集的定义。
-> - 第四章描述了某些类别的设备和特定设备类型的设备绑定。
-> - 第五章规定了设备树的 DTB 编码。
-> - 第六章规定了 DTS 源码语言。
+- 第一章介绍了 DTSpec 所指定的架构。
+- 第二章介绍了设备树的概念，并描述了其逻辑结构和标准属性。
+- 第三章规定了符合 DTSpec 的设备树所需的基本设备节点集的定义。
+- 第四章描述了某些类别的设备和特定设备类型的设备绑定。
+- 第五章规定了设备树的 DTB 编码。
+- 第六章规定了 DTS 源码语言。
 
 > - Chapter 1 introduces the architecture being specified by DTSpec.
 > - Chapter 2 introduces the devicetree concept and describes its logical structure and standard properties.
