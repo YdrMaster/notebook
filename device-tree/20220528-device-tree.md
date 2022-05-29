@@ -18,4 +18,4 @@
 
    目前设备树缺乏一种令人满意的实现，还有一个原因是[设备树标准](https://github.com/devicetree-org/devicetree-specification)本身缺乏一个通用的对定义和基本逐字节遍历的薄封装。因此，各种实现五花八门，无论是功能还是设计都无法统一。如果能实现一个足够薄又足够稳定的标准映射，成为其他实现的基础，对于定制化的设备树解析将大有帮助。
 
-综上所述，我将从[翻译](20220528-translation-devicetree/doc.md)标准发布版本 [v0.4-rc1](https://github.com/devicetree-org/devicetree-specification/releases/tag/v0.4-rc1) 开始推进这个工作。
+综上所述，我将从[翻译](20220528-translation-devicetree/toc.md)标准发布版本 [v0.4-rc1](https://github.com/devicetree-org/devicetree-specification/releases/tag/v0.4-rc1) 开始推进这个工作。

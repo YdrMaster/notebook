@@ -24,7 +24,7 @@
 
 - [设备树](device-tree)
   - 20220528-[讨论设备树解析的写法](device-tree/20220528-device-tree.md)
-  - 20220528-[【翻译】设备树规范](device-tree/20220528-translation-devicetree/doc.md)
+  - 20220528-[【翻译】设备树规范](device-tree/20220528-translation-devicetree/toc.md)
 
 - [咨询记录](consult-journal)
   - [洛佳](consult-journal/LuoJia.md)
