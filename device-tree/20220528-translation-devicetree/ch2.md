@@ -428,7 +428,7 @@ DTSpec 为设备节点指定了一组标准属性。这些属性将在本节中�
 
 > The *compatible* property value consists of one or more strings that define the specific programming model for e device. This list of strings should be used by a client program for device driver selection. The property lue consists of a concatenated list of null terminated strings, from most specific to most general. They allow device to express its compatibility with a family of similar devices, potentially allowing a single device driver  match against several devices.
 
-推荐的格式是“制造商，型号”，其中制造商是一个描述制造商名称的字符串（如股票代码），而型号则指定型号。
+推荐的格式是 `"制造商,型号"`，其中制造商是一个描述制造商名称的字符串（如股票代码），而型号则指定型号。
 
 > The recommended format is "manufacturer,model", where manufacturer is a string describing the name of the manufacturer (such as a stock ticker symbol), and model specifies the model number.
 
@@ -445,3 +445,214 @@ compatible = "fsl,mpc8641", "ns16550";
 在这个例子中，操作系统首先会尝试找到一个支持 `fsl,mpc8641` 的设备驱动程序。如果没有找到驱动程序，它就会试图找到一个支持更普遍的 `ns16550` 设备类型的驱动程序。
 
 > In this example, an operating system would first try to locate a device driver that supported fsl,mpc8641. If a driver was not found, it would then try to locate a driver that supported the more general ns16550 device type.
+
+### 2.3.2 `model`
+
+属性名：`medel`
+
+值类型：`<string>`
+
+描述：
+
+型号属性值是一个 `<string>`，指定设备的制造商和型号。
+
+> The model property value is a `<string>` that specifies the manufacturer’s model number of the device.
+
+推荐的格式是：`"制造商,型号"`，其中制造商是一个描述制造商名称的字符串（如股票代码），而型号则指定型号。
+
+> The recommended format is: "manufacturer,model", where manufacturer is a string describing the name of the manufacturer (such as a stock ticker symbol), and model specifies the model number.
+
+示例：
+
+```dts
+model = "fsl,MPC8349EMITX";
+```
+
+### 2.3.3 `phandle`
+
+属性名：`phandle`
+
+值类型：`<u32>`
+
+描述：
+
+`phandle` 属性为一个节点指定了一个数字标识符，该标识符在设备树内是唯一的。`phandle` 属性值由需要引用与该属性相关联的节点的其他节点使用。
+
+> The phandle property specifies a numerical identifier for a node that is unique within the devicetree. The phandle property value is used by other nodes that need to refer to the node associated with the property.
+
+示例：
+
+请参阅以下设备树摘录：
+
+> See the following devicetree excerpt:
+
+```dts
+pic@10000000 {
+  phandle = <1>;
+  interrupt-controller;
+  reg = <0x10000000 0x100>;
+};
+```
+
+一个 `phandle` 值为 1 的定义。另一个设备节点可以引用 `phandle` 值为 1 的 pic 节点。
+
+> A phandle value of 1 is defined. Another device node could reference the pic node with a phandle value of 1:
+
+```dts
+another-device-node {
+interrupt-parent = <1>;
+};
+```
+
+---
+
+**注意**：旧版本的设备树可能包含这个属性的废弃形式，称为 `linux,phandle`。为了兼容，如果没有 `phandle` 属性，客户程序可能希望支持 `linux,phandle`。这两个属性的含义和用途是相同的。
+
+> **Note**: Older versions of devicetrees may be encountered that contain a deprecated form of this property called linux, phandle. For compatibility, a client program might want to support linux,phandle if a phandle property is not present. The meaning and use of the two properties is identical.
+
+---
+
+**注意**：大多数 DTS 形式的设备树（见附录 A）将不包含明确的 `phandle` 属性。当 DTS 被编译成二进制 DTB 格式时，DTC 工具会自动插入 `phandle` 属性。
+
+**Note**: Most devicetrees in DTS (see Appendix A) will not contain explicit phandle properties. The DTC tool automatically inserts the phandle properties when the DTS is compiled into the binary DTB format.
+
+---
+
+### 2.3.4 `status`
+
+属性名：`status`
+
+值类型：`<string>`
+
+描述：
+
+状态属性指示了设备的运行状态。缺少状态属性应被视为该属性存在，其值为 `"okay"`。有效值在表 2.4 中列出并定义。
+
+> The status property indicates the operational status of a device. The lack of a status property should be treated as if the property existed with the value of "okay". Valid values are listed and defined in Table 2.4.
+
+表 2.4：状态属性的值
+
+> Table 2.4: Values for status property
+
+- `"okay"`
+
+  表明设备正在运行。
+
+  > Indicates the device is operational.
+
+- `"disabled"`
+
+  表示该设备目前没有运行，但将来可能会运行（例如，有些东西没有插上电源，或者关闭）。关于禁用对某一特定设备的含义，请参考设备绑定的细节。
+
+  > Indicates that the device is not presently operational, but it might become operational in the future (for example, something is not plugged in, or switched off). Refer to the device binding for details on what disabled means for a given device.
+
+- `"reserved"`
+
+  表示设备可以运行，但不应该被使用。通常，这用于由另一个软件组件控制的设备，如平台固件。
+
+  > Indicates that the device is operational, but should not be used. Typically this is used for devices that are controlled by another software component, such as platform firmware.
+
+- `"fail"`
+
+  表示设备不能运行。在设备中检测到一个严重的错误，如果不进行修理，它就不可能投入使用。
+
+  > Indicates that the device is not operational. A serious error was detected in the device, and it is unlikely to become operational without repair.
+
+- `"fail-sss"`
+
+  表示设备无法运行。在设备中检测到一个严重的错误，如果不进行修理，它就不可能投入使用。该值的 `sss` 部分是设备指定的，表示检测到的错误情况。
+
+  > Indicates that the device is not operational. A serious error was detected in the device and it is unlikely to become operational without repair. The sss portion of the value is specific to the device and indicates the error condition detected.
+
+### 2.3.5 `#address-cells` 和 `#size-cells`
+
+属性名：`#address-cells`，`#size-cells`
+
+值类型：`<u32>`
+
+描述：
+
+`#address-cells` 和 `#size-cells` 属性可用于任何在设备树层次结构中拥有子节点的设备节点，并描述应如何寻址子设备节点。`#address-cells` 属性定义了用于编码子节点的 `reg` 属性中的地址字段的 `<u32>` 单元的数量。`#size-cells` 属性定义了用于编码子节点的 `reg` 属性中的大小字段的 `<u32>` 单元的数量。
+
+> The #address-cells and #size-cells properties may be used in any device node that has children in the devicetree hierarchy and describes how child device nodes should be addressed. The #address-cells property defines the number of `<u32>` cells used to encode the address field in a child node’s reg property. The #size-cells property defines the number of `<u32>` cells used to encode the size field in a child node’s reg property.
+
+`#address-cells` 和 `#size-cells` 属性不从设备树中的祖先继承。它们应当明确定义。
+
+> The #address-cells and #size-cells properties are not inherited from ancestors in the devicetree. They shall be explicitly defined.
+
+符合 DTSpec 的引导程序应当在所有非叶节点上提供 `#address-cell` 和 `#size-cells`。
+
+> A DTSpec-compliant boot program shall supply #address-cells and #size-cells on all nodes that have children.
+
+如果缺少，客户程序应该假定 `#address-cells` 的默认值为 2，`#size-cells` 的默认值为 1。
+
+> If missing, a client program should assume a default value of 2 for #address-cells, and a value of 1 for #size-cells
+
+示例：
+
+请参阅以下设备树摘录：
+
+> See the following devicetree excerpt:
+
+```dts
+soc {
+  #address-cells = <1>;
+  #size-cells = <1>;
+
+  serial@4600 {
+    compatible = "ns16550";
+    reg = <0x4600 0x100>;
+    clock-frequency= <0>;
+    interrupts = <0xA 0x8>;
+    interrupt-parent = <&ipic>;
+  };
+};
+```
+
+此示例中，`soc` 节点的 `#address-cells` 和 `#size-cells` 属性都被设置为 1。这个设置指定了需要一个单元来表示地址，需要一个单元来表示作为这个节点的子节点的大小。
+
+> In this example, the #address-cells and #size-cells properties of the soc node are both set to 1. This setting specifies that one cell is required to represent an address and one cell is required to represent the size of nodes that are children of this node.
+
+串行设备寄存器属性必须遵循父节点（soc）中设置的这个规范——地址由一个单元（0x4600）表示，大小由一个单元（0x100）表示。
+
+> The serial device reg property necessarily follows this specification set in the parent (soc) node—the address is represented by a single cell (0x4600), and the size is represented by a single cell (0x100).
+
+### 2.3.6 `reg`
+
+属性名：`reg`
+
+属性值：`<prop-encoded-array>`编码为任意数量的（地址，长度）对。
+
+> Property value: `<prop-encoded-array>` encoded as an arbitrary number of (address, length) pairs.
+
+描述：
+
+寄存器属性描述了设备的资源在其父总线所定义的地址空间内的地址。最常见的是这意味着内存映射的 IO 寄存器块的偏移量和长度，但在某些总线类型上可能有不同的含义。根节点定义的地址空间中的地址是 CPU 物理地址。
+
+> The reg property describes the address of the device’s resources within the address space defined by its parent bus. Most commonly this means the offsets and lengths of memory-mapped IO register blocks, but may have a different meaning on some bus types. Addresses in the address space defined by the root node are CPU real addresses.
+
+该值是一个 `<prop-encoded-array>`，由任意数量的地址和长度对 `<address length>` 组成。指定地址和长度所需的 `<u32>` 单元的数量是针对总线的，由设备节点的父节点的 `#address-cell` 和 `#size-cells` 属性指定。如果父节点为 `#size-cells` 指定的值为 0，那么 `reg` 值中的长度字段应被省略。
+
+> The value is a `<prop-encoded-array>`, composed of an arbitrary number of pairs of address and length, `<address length>`. The number of `<u32>` cells required to specify the address and length are bus-specific and are specified by the #address-cells and #size-cells properties in the parent of the device node. If the parent node specifies a value of 0 for #size-cells, the length field in the value of reg shall be omitted.
+
+示例：
+
+假设一个片上系统的设备有两个寄存器块，一块是位于 SOC 中偏移量 0x3000 的 32 字节，一块是位于偏移量 0xFE00 的 256 字节。寄存器属性将被编码如下（假设 `#address-cell` 和 `#size-cells` 值为 1）。
+
+> Suppose a device within a system-on-a-chip had two blocks of registers, a 32-byte block at offset 0x3000 in the SOC and a 256-byte block at offset 0xFE00. The reg property would be encoded as follows (assuming #address-cells and #size-cells values of 1):
+
+```dts
+reg = <0x3000 0x20 0xFE00 0x100>;
+```
+
+### 2.3.7 `virtual-reg`
+
+属性名：`virtual-reg`
+
+值类型：`<u32>`
+
+描述：
+
+虚寄存器属性指定了一个有效地址，该地址映射到设备节点的 `reg` 属性中指定的第一个物理地址。这个属性使引导程序能够向客户程序提供已经设置好的虚拟到物理的映射关系。
+
+> The virtual-reg property specifies an effective address that maps to the first physical address specified in the reg property of the device node. This property enables boot programs to provide client programs with virtual-to-physical mappings that have been set up.
