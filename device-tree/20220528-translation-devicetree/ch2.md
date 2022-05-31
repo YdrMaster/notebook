@@ -656,3 +656,137 @@ reg = <0x3000 0x20 0xFE00 0x100>;
 虚寄存器属性指定了一个有效地址，该地址映射到设备节点的 `reg` 属性中指定的第一个物理地址。这个属性使引导程序能够向客户程序提供已经设置好的虚拟到物理的映射关系。
 
 > The virtual-reg property specifies an effective address that maps to the first physical address specified in the reg property of the device node. This property enables boot programs to provide client programs with virtual-to-physical mappings that have been set up.
+
+### 2.3.8 `ranges`
+
+属性名：`virtual-reg`
+
+值类型：`<empty>` 或 `<prop-encoded-array>` 编码为任意数量的（子总线地址，父总线地址，长度）三元组。
+
+> Value type: `<empty>` or `<prop-encoded-array>` encoded as an arbitrary number of (child-bus-address, parent-busaddress, length) triplets.
+
+描述：
+
+范围属性提供了一种定义总线地址空间（子地址空间）和总线节点父节点地址空间（父地址空间）之间的映射或转换的方法。
+
+> The ranges property provides a means of defining a mapping or translation between the address space of the bus (the child address space) and the address space of the bus node’s parent (the parent address space).
+
+范围属性的值的格式是任意数量的（子总线地址，父总线地址，长度）三元组。
+
+> The format of the value of the ranges property is an arbitrary number of triplets of (child-bus-address, parentbus-address, length).
+
+- 子总线地址是子总线地址空间内的物理地址。表示地址的单元数取决于总线，可以从该节点的 `#address-cells`（`ranges` 属性出现的节点）确定。
+- 父总线地址是父总线地址空间内的物理地址。表示父地址的单元数取决于总线，可以从定义父地址空间的节点的 `#address-cells` 属性确定。
+- 长度指定子地址空间中范围的大小。表示大小的单元格的数量可以从该节点的 `#size-cells`（`ranges` 属性出现的节点）确定。
+
+> - The child-bus-address is a physical address within the child bus’ address space. The number of cells to represent the address is bus dependent and can be determined from the #address-cells of this node (the node in which the ranges property appears).
+> - The parent-bus-address is a physical address within the parent bus’ address space. The number of cells to represent the parent address is bus dependent and can be determined from the #address-cells property of the node that defines the parent’s address space.
+> - The length specifies the size of the range in the child’s address space. The number of cells to represent the size can be determined from the #size-cells of this node (the node in which the ranges property appears).
+
+如果该属性定义了一个 `<empty>` 值，它指定父地址空间和子地址空间是相同的，并且不需要地址转换。
+
+> If the property is defined with an `<empty>` value, it specifies that the parent and child address space is identical, and no address translation is required.
+
+如果该属性不存在于总线节点中，则假定该节点的子节点与父地址空间之间不存在映射。
+
+> If the property is not present in a bus node, it is assumed that no mapping exists between children of the node and the parent address space.
+
+地址翻译示例：
+
+> Address Translation Example:
+
+```dts
+  <0x0 0xe0000000 0x00100000>;
+```
+
+```dts
+soc {
+  compatible = "simple-bus";
+  #address-cells = <1>;
+  # size-cells = <1>;
+  ranges = <0x0 0xe0000000 0x00100000>;
+
+  serial@4600 {
+    device_type = "serial";
+    compatible = "ns16550";
+    reg = <0x4600 0x100>;
+    clock-frequency = <0>;
+    interrupts = <0xA 0x8>;
+    interrupt-parent = <&ipic>;
+  };
+};
+```
+
+soc 节点指定范围属性
+
+> The soc node specifies a ranges property of
+
+```dts
+  <0x0 0xe0000000 0x00100000>;
+```
+
+此属性值指定对于 1024 KB 范围的地址空间，地址为物理 0x0 的子节点映射到物理地址 0xe0000000 的父地址。使用此映射，串行设备节点可以通过地址 0xe0004600 的加载或存储来寻址，偏移量为 0x4600（在 reg 中指定）加上范围中指定的 0xe0000000 映射。
+
+> This property value specifies that for a 1024 KB range of address space, a child node addressed at physical 0x0 maps to a parent address of physical 0xe0000000. With this mapping, the serial device node can be addressed by a load or store at address 0xe0004600, an offset of 0x4600 (specified in reg) plus the 0xe0000000 mapping specified in ranges.
+
+### 2.3.9 `dma-ranges`
+
+属性名：`dma-ranges`
+
+值类型：`<empty>` 或 `<prop-encoded-array>` 编码为任意数量的（子总线地址，父总线地址，长度）三元组。
+
+> Value type: `<empty>` or `<prop-encoded-array>` encoded as an arbitrary number of (child-bus-address, parent-busaddress, length) triplets.
+
+描述：
+
+DMA 范围属性用于描述内存映射总线的直接内存访问（DMA）结构，其设备树父级可以通过总线 DMA 操作访问。它提供了一种在总线的物理地址空间和总线的父级物理地址空间之间定义映射或转换的方法。
+
+> The dma-ranges property is used to describe the direct memory access (DMA) structure of a memory-mapped bus whose devicetree parent can be accessed from DMA operations originating from the bus. It provides a means of defining a mapping or translation between the physical address space of the bus and the physical address space of the parent of the bus.
+
+DMA 范围属性值的格式是（子总线地址、父总线地址、长度）的任意数量的三元组。每个指定的三元组描述一个连续的 DMA 地址范围。
+
+> The format of the value of the dma-ranges property is an arbitrary number of triplets of (child-bus-address, parent-bus-address, length). Each triplet specified describes a contiguous DMA address range.
+
+- 子总线地址是子总线地址空间内的物理地址。表示地址的单元数取决于总线，并且可以从该节点的 `#address-cells`（`dma-ranges` 属性出现的节点）确定。
+- 父总线地址是父总线地址空间内的物理地址。表示父地址的单元数取决于总线，可以从定义父地址空间的节点的 `#address-cells` 属性确定。
+- 长度指定子地址空间中范围的大小。表示大小的单元格的数量可以从该节点的 `#size-cells`（`dma-ranges` 属性出现的节点）确定。
+
+> - The child-bus-address is a physical address within the child bus’ address space. The number of cells to represent the address depends on the bus and can be determined from the #address-cells of this node (the node in which the dma-ranges property appears).
+> - The parent-bus-address is a physical address within the parent bus’ address space. The number of cells to represent the parent address is bus dependent and can be determined from the #address-cells property of the node that defines the parent’s address space.
+> - The length specifies the size of the range in the child’s address space. The number of cells to represent the size can be determined from the #size-cells of this node (the node in which the dma-ranges property appears).
+
+### 2.3.10 `dma-coherent`
+
+属性名：`dma-coherent`
+
+值类型：`<empty>`
+
+描述：
+
+对于默认情况下 I/O 不连贯的架构，DMA 连贯性属性用于指示设备能够进行连贯的 DMA 操作。某些架构默认具有连贯 DMA，此属性不适用。
+
+> For architectures which are by default non-coherent for I/O, the dma-coherent property is used to indicate a device is capable of coherent DMA operations. Some architectures have coherent DMA by default and this property is not applicable.
+
+### 2.3.11 `name`（废弃）
+
+属性名：`name`
+
+值类型：`<string>`
+
+描述：
+
+名称属性是指定节点名称的字符串。此属性已弃用，不推荐使用。但是，它可能用于较旧的不符合 DTSpec 的设备树。操作系统应该根据树的节点名称来确定节点的名称（参见第 2.2.1 节）。
+
+> The name property is a string specifying the name of the node. This property is deprecated, and its use is not recommended. However, it might be used in older non-DTSpec-compliant devicetrees. Operating system should determine a node’s name based on the node-name component of the node name (see Section 2.2.1).
+
+### 2.3.12 `device_type`（废弃）
+
+属性名：`device_type`
+
+值类型：`<string>`
+
+描述：
+
+设备类型属性在 IEEE 1275 中用于描述设备的 FCode 编程模型。由于 DTSpec 没有 FCode，因此不推荐使用该属性的新用途，并且它应该仅包含在 cpu 和内存节点上，以便与 IEEE 1275 派生的设备树兼容。
+
+> The device_type property was used in IEEE 1275 to describe the device’s FCode programming model. Because DTSpec does not have FCode, new use of the property is deprecated, and it should be included only on cpu and memory nodes for compatibility with IEEE 1275–derived devicetrees.
