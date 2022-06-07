@@ -6,7 +6,7 @@
 
 - [`zCore`](zCore)
   - [用户态驱动](zCore/user-mode-driver/20220415-summary.md)
-  - [笔记]
+  - 笔记
     - 20220418-[`zCore` 与 `rCore(v3)` 内存布局的区别](zCore/20220418-difference-of-memory-between-zcore-and-rcore-v3/doc.md)
     - 20220418-[【翻译】RISCV 特权级规范-寻址及内存保护](zCore/20220418-translation/doc.md)
     - 20220421-[RISC-V `la` 伪指令的理解](zCore/20220421-riscv-la.md)
@@ -22,6 +22,7 @@
   - 20220423-[在 WSL2 上调试 D1 开发板](oreboot/20220524-d1-wsl2.md)
   - 20220528-[对启动流程的全面理解](oreboot/20220528-boot.md)
   - 20220528-[利用可编程的 SRAM 实现超级加速](oreboot/20220528-sram.md)
+  - 20220607-[DDR 初始化](oreboot/20220607-ddr-init.md)
 
 - [设备树](device-tree)
   - 20220528-[讨论设备树解析的写法](device-tree/20220528-device-tree.md)
