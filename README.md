@@ -23,6 +23,7 @@
   - 20220528-[对启动流程的全面理解](oreboot/20220528-boot.md)
   - 20220528-[利用可编程的 SRAM 实现超级加速](oreboot/20220528-sram.md)
   - 20220607-[DDR 初始化](oreboot/20220607-ddr-init.md)
+  - 20220617-[提出两种通用 SBI 扩展](oreboot/20220617-design.md)
 
 - [设备树](device-tree)
   - 20220528-[讨论设备树解析的写法](device-tree/20220528-device-tree.md)
