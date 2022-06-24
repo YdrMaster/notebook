@@ -24,6 +24,7 @@
   - 20220528-[利用可编程的 SRAM 实现超级加速](oreboot/20220528-sram.md)
   - 20220607-[DDR 初始化](oreboot/20220607-ddr-init.md)
   - 20220617-[可退出式 SBI 和基于 SBI 引导的思路](oreboot/20220617-design.md)
+  - 20220624-[【翻译】虚拟 IO 设备标准 v1.2](oreboot/20220624-virtio/toc.md)
 
 - [设备树](device-tree)
   - 20220528-[讨论设备树解析的写法](device-tree/20220528-device-tree.md)
