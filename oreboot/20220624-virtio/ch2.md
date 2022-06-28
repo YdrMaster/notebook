@@ -2,7 +2,7 @@
 
 > 2 Basic Facilities of a Virtio Device
 
-virtio 设备通过特定于总线的方法发现和识别（参见总线专用部分：4.1 Virtio Over PCI Bus、4.2 Virtio Over MMIO 和 4.3 Virtio Over Channel I/O）。每个设备由以下部分组成：
+virtio 设备通过特定于总线的方法发现和识别（参见总线专用部分：[4.1 PCI 总线上的 virtio](ch4.md#41-pci-总线上的-virtio)、[4.2 内存映射 IO 上的 virtio](ch4.md#42-内存映射-io-上的-virtio) 和 [4.3 通道 I/O 上的 virtio](todo.md)）。每个设备由以下部分组成：
 
 > A virtio device is discovered and identified by a bus-specific method (see the bus specific sections: 4.1 Virtio Over PCI Bus, 4.2 Virtio Over MMIO and 4.3 Virtio Over Channel I/O). Each device consists of the following parts:
 
@@ -22,11 +22,11 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 
 > 2.1 Device Status Field
 
-在驱动程序初始化设备期间，驱动程序遵循 3.1 中指定的步骤顺序。
+在驱动程序初始化设备期间，驱动程序遵循 [3.1](ch3.md#31-设备初始化) 中指定的步骤顺序。
 
 > During device initialization by a driver, the driver follows the sequence of steps specified in 3.1.
 
-设备状态字段提供此序列已完成步骤的简单底层指示。想象它连接到控制台上的信号灯，指示每个设备的状态是最有用的。定义了以下位（下面按它们通常设置的顺序列出）：
+设备状态字段提供此序列已完成步骤的简单底层表示。一种有用的比喻是想象它是连接到控制台的信号灯，指示着每个设备的状态。定义了以下位（下面按它们通常设置的顺序列出）：
 
 > The device status field provides a simple low-level indication of the completed steps of this sequence. It’s most useful to imagine it hooked up to traffic lights on the console indicating the status of each device. The following bits are defined (listed below in the order in which they would be typically set):
 
@@ -38,7 +38,7 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 
 > **DRIVER (2)** Indicates that the guest OS knows how to drive the device.
 
-> 注意：在设置该位之前可能会有一个显着（或无限）的延迟。例如，在 Linux 下，驱动程序可以是可加载的模块。
+> 注意：在设置该位之前可能会有一个显著（或无限）的延迟。例如，在 Linux 下，驱动程序可以是可加载的模块。
 >
 > > Note: There could be a significant (or infinite) delay before setting this bit. For example, under Linux, drivers can be loadable modules.
 
@@ -54,7 +54,7 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 
 > **DRIVER_OK (4)** Indicates that the driver is set up and ready to drive the device.
 
-**DEVICE_NEEDS_RESET（64） 表示设备遇到无法恢复的错误。
+**DEVICE_NEEDS_RESET（64）** 表示设备遇到无法恢复的错误。
 
 > **DEVICE_NEEDS_RESET (64)** Indicates that the device has experienced an error from which it can’t recover.
 
@@ -66,7 +66,7 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 
 > 2.1.1 Driver Requirements: Device Status Field
 
-驱动程序**必须**更新设备状态，设置位以指示 3.1 中指定的驱动程序初始化序列的已完成步骤。驱动程序**不得**清除设备状态位。如果驱动程序设置了 FAILED 位，驱动程序**必须**稍后在尝试重新初始化之前重置设备。
+驱动程序**必须**更新设备状态，设置位以指示 [3.1](ch3.md#31-设备初始化) 中定义的驱动程序初始化序列的已完成步骤。驱动程序**不得**清除设备状态位。如果驱动程序设置了 FAILED 位，驱动程序**必须**稍后在尝试重新初始化之前重置设备。
 
 > The driver MUST update device status, setting bits to indicate the completed steps of the driver initialization sequence specified in 3.1. The driver MUST NOT clear a device status bit. If the driver sets the FAILED bit, the driver MUST later reset the device before attempting to re-initialize.
 
@@ -78,15 +78,15 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 >
 > Note: For example, the driver can’t assume requests in flight will be completed if DEVICE_NEEDS_RESET is set, nor can it assume that they have not been completed. A good implementation will try to recover by issuing a reset.
 
-2.1.2 设备要求：设备状态字段
+### 2.1.2 设备要求：设备状态字段
 
 > 2.1.2 Device Requirements: Device Status Field
 
-在 DRIVER_OK 之前，设备**不得**消耗缓冲区或向驱动程序发送任何已使用的缓冲区通知。
+在 DRIVER_OK 之前，设备**不得**消耗缓冲区或向驱动程序发送任何已用缓冲区的通知。
 
 > The device MUST NOT consume buffers or send any used buffer notifications to the driver before DRIVER_OK.
 
-当设备进入需要重置的错误状态时，**应该**设置 DEVICE_NEEDS_RESET。如果设置了 DRIVER_OK，则在设置 DEVICE_NEEDS_RESET 后，设备必须向驱动程序发送设备配置更改通知。
+当设备进入需要重置的错误状态时，**应该**设置 DEVICE_NEEDS_RESET。如果设置了 DRIVER_OK，则在设置 DEVICE_NEEDS_RESET 后，设备必须向驱动程序发送设备配置改变通知。
 
 > The device SHOULD set DEVICE_NEEDS_RESET when it enters an error state that a reset is needed. If DRIVER_OK is set, after it sets DEVICE_NEEDS_RESET, the device MUST send a device configuration change notification to the driver.
 
@@ -138,7 +138,7 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 
 > The driver SHOULD go into backwards compatibility mode if the device does not offer a feature it understands, otherwise MUST set the FAILED device status bit and cease initialization.
 
-2.2.2 设备要求：功能位
+### 2.2.2 设备要求：功能位
 
 > 2.2.2 Device Requirements: Feature Bits
 
@@ -150,7 +150,7 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 
 > If a device has successfully negotiated a set of features at least once (by accepting the FEATURES_OK device status bit during device initialization), then it SHOULD NOT fail re-negotiation of the same set of features after a device or system reset. Failure to do so would interfere with resuming from suspend and error recovery.
 
-### 2.2.3 旧版接口：关于特性位的说明
+### 2.2.3 旧版接口：关于功能位的说明
 
 > 2.2.3 Legacy Interface: A Note on Feature Bits
 
@@ -158,11 +158,11 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 
 > Transitional Drivers MUST detect Legacy Devices by detecting that the feature bit VIRTIO_F_VERSION_1 is not offered. Transitional devices MUST detect Legacy drivers by detecting that VIRTIO_F_VERSION_1 has not been acknowledged by the driver.
 
-在这种情况下，设备通过旧接口使用。
+在这种情况下，设备通过旧版接口使用。
 
 > In this case device is used through the legacy interface.
 
-旧接口支持是可选的。因此，过渡和非过渡设备和驱动程序都符合此规范。
+旧版接口支持是**可选**的。因此，过渡和非过渡设备和驱动程序都符合此规范。
 
 > Legacy interface support is OPTIONAL. Thus, both transitional and non-transitional devices and drivers are compliant with this specification.
 
@@ -170,7 +170,7 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 
 > Requirements pertaining to transitional devices and drivers is contained in sections named ’Legacy Interface’ like this one.
 
-当设备通过旧接口使用时，过渡设备和过渡驱动程序必须根据旧接口部分中记录的要求进行操作。这些部分中的规范文本通常不适用于非过渡设备。
+当设备通过旧版接口使用时，过渡设备和过渡驱动程序**必须**根据旧版接口部分中描述的要求进行操作。这些部分中的规范文本通常不适用于非过渡设备。
 
 > When device is used through the legacy interface, transitional devices and transitional drivers MUST operate according to the requirements documented within these legacy interface sections. Specification text within these sections generally does not apply to non-transitional devices.
 
@@ -186,7 +186,7 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 
 > There are three types of notifications:
 
-- 配置更改通知
+- 配置改变通知
 - 缓冲区可用通知
 - 缓冲区已用通知。
 
@@ -194,7 +194,7 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 > - available buffer notification
 > - used buffer notification.
 
-配置更改通知和缓冲区已用通知由设备发送，接收者是驱动程序。配置改变通知表示设备配置空间发生了变化；缓冲区已用通知表示可能已经在通知指定的虚拟队列上使用了缓冲区。
+配置改变通知和缓冲区已用通知由设备发送，接收者是驱动程序。配置改变通知表示设备配置空间发生了变化；缓冲区已用通知表示可能已经在通知指定的虚拟队列上使用了缓冲区。
 
 > Configuration change notifications and used buffer notifications are sent by the device, the recipient is the driver. A configuration change notification indicates that the device configuration space has changed; a used buffer notification indicates that a buffer may have been made used on the virtqueue designated by the notification.
 
@@ -542,7 +542,7 @@ static inline unsigned virtq_size(unsigned int qsz)
 }
 ```
 
-这会浪费一些填充空间。使用旧接口时，过渡设备和驱动程序都必须使用以下虚拟队列布局结构来定位虚拟队列的元素：
+这会浪费一些填充空间。使用旧版接口时，过渡设备和驱动程序都必须使用以下虚拟队列布局结构来定位虚拟队列的元素：
 
 > This wastes some space with padding. When using the legacy interface, both transitional devices and drivers MUST use the following virtqueue layout structure to locate elements of the virtqueue:
 
@@ -606,7 +606,7 @@ struct virtq {
 
 > 2.7.4.3 Legacy Interface: Message Framing
 
-遗憾的是，最初的驱动程序实现使用了简单的布局，并且设备开始依赖它，尽管有这个规范的措辞。此外，virtio_blk SCSI 命令的规范要求来自帧边界的直观字段长度（参见 5.2.6.3 旧接口：设备操作）。
+遗憾的是，最初的驱动程序实现使用了简单的布局，并且设备开始依赖它，尽管有这个规范的措辞。此外，virtio_blk SCSI 命令的规范要求来自帧边界的直观字段长度（参见 5.2.6.3 旧版接口：设备操作）。
 
 > Regrettably, initial driver implementations used simple layouts, and devices came to rely on it, despite this specification wording. In addition, the specification for virtio_blk SCSI commands required intuiting field lengths from frame boundaries (see 5.2.6.3 Legacy Interface: Device Operation).
 
