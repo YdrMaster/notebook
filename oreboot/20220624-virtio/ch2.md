@@ -210,7 +210,7 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 
 > Most transports implement notifications sent by the device to the driver using interrupts. Therefore, in previous versions of this specification, these notifications were often called interrupts. Some names defined in this specification still retain this interrupt terminology. Occasionally, the term event is used to refer to a notification or a receipt of a notification.
 
-## 2.4 设备复位
+## 2.4 重置设备
 
 > 2.4 Device Reset
 
@@ -218,7 +218,7 @@ virtio 设备通过特定于总线的方法发现和识别（参见总线专用�
 
 > The driver may want to initiate a device reset at various times; notably, it is required to do so during device initialization and device cleanup.
 
-驱动程序用于启动重置的机制是特定于传输的。
+驱动程序用于启动重置的机制是特定于传输方式的。
 
 > The mechanism used by the driver to initiate the reset is transport specific.
 
@@ -323,15 +323,19 @@ Note that for legacy interfaces, device configuration space is generally the gue
 
 > The mechanism for bulk data transport on virtio devices is pretentiously called a virtqueue. Each device can have zero or more virtqueues^1^.
 
-驱动程序通过将可用缓冲区添加到队列中来使请求对设备可用，即，将描述请求的缓冲区添加到 virtqueue，并可选地触发驱动程序事件，即向设备发送可用缓冲区通知。
+> 1 例如，最简单的网络设备有两个虚拟队列，一个用于发送，一个用于接收。
+>
+> > 1 For example, the simplest network device has one virtqueue for transmit and one for receive.
+
+驱动程序通过将可用缓冲区添加到队列中来使请求对设备可用，即，将描述请求的缓冲区添加到虚拟队列；并可选地触发驱动程序事件，即，向设备发送可用缓冲区通知。
 
 > Driver makes requests available to device by adding an available buffer to the queue, i.e., adding a buffer describing the request to a virtqueue, and optionally triggering a driver event, i.e., sending an available buffer notification to the device.
 
-设备执行请求，并在完成时将已使用的缓冲区添加到队列中，即通过将缓冲区标记为已使用来让驱动程序知道。然后设备可以触发设备事件，即向驱动程序发送已用缓冲区通知。
+设备执行请求，并在完成时将已用缓冲区添加到队列，即，通过将缓冲区标记为已使用来让驱动程序知道。然后设备可以触发设备事件，即向驱动程序发送已用缓冲区通知。
 
 > Device executes the requests and - when complete - adds a used buffer to the queue, i.e., lets the driver know by marking the buffer as used. Device can then trigger a device event, i.e., send a used buffer notification to the driver.
 
-设备报告它为它使用的每个缓冲区写入内存的字节数。这被称为“使用长度”。
+设备报告它向使用的每个缓冲区写入内存的字节数。这被称为“已用长度”。
 
 > Device reports the number of bytes it has written to memory for each buffer it uses. This is referred to as “used length”.
 
@@ -348,7 +352,7 @@ Note that for legacy interfaces, device configuration space is generally the gue
 > Each virtqueue can consist of up to 3 parts:
 
 - 描述符区 - 用于描述缓冲区
-- 驱动程序区域 - 驱动程序提供给设备的额外数据
+- 驱动区 - 驱动程序提供给设备的额外数据
 - 设备区 - 设备提供给驱动程序的额外数据
 
 > - Descriptor Area - used for describing buffers
@@ -367,7 +371,7 @@ Note that for legacy interfaces, device configuration space is generally the gue
 > > - Available Ring - for the Driver Area
 > > - Used Ring - for the Device Area
 
-支持两种格式：Split Virtqueues（参见 2.7 Split Virtqueues）和 Packed Virtqueues（参见 2.8 Packed Virtqueues）。
+支持两种格式：分散虚拟队列（参见 [2.7 分散虚拟队列](#27-分散虚拟队列)）和紧实虚拟队列（参见 [2.8 紧实虚拟队列](#28-紧实虚拟队列)）。
 
 > Two formats are supported: Split Virtqueues (see 2.7 Split Virtqueues) and Packed Virtqueues (see 2.8 Packed Virtqueues).
 
@@ -379,7 +383,7 @@ Note that for legacy interfaces, device configuration space is generally the gue
 
 > 2.6.1 Virtqueue Reset
 
-当协商 VIRTIO_F_RING_RESET 时，驱动程序可以单独重置一个虚拟队列。重置虚拟队列的方法是特定于传输方式的。
+如果协商了 VIRTIO_F_RING_RESET，驱动程序可以单独重置一个虚拟队列。重置虚拟队列的方法是特定于传输方式的。
 
 > When VIRTIO_F_RING_RESET is negotiated, the driver can reset a virtqueue individually. The way to reset the virtqueue is transport specific.
 
@@ -439,19 +443,19 @@ Note that for legacy interfaces, device configuration space is generally the gue
 
 > When re-enabling a queue, the driver MUST configure the queue resources as during initial virtqueue discovery, but optionally with different parameters.
 
-## 2.7 拆分虚拟队列
+## 2.7 分散虚拟队列
 
 > 2.7 Split Virtqueues
 
-拆分虚拟队列格式是该标准 1.0 版（及更早版本）支持的唯一格式。
+分散虚拟队列格式是本标准 1.0 版（及更早版本）支持的唯一格式。
 
 > The split virtqueue format was the only format supported by the version 1.0 (and earlier) of this standard.
 
-split virtqueue 格式将虚拟队列分成几个部分，其中每个部分可由驱动程序或设备写入，但不能同时由两者写入。在使缓冲区可用以及将其标记为已使用时，需要更新零件内的多个零件和/或位置。
+分散虚拟队列格式将虚拟队列分成几个部分，其中每个部分可由驱动程序或设备写入，但不能同时由两者写入。在使缓冲区可用以及将其标记为已使用时，需要更新多个部分和/或某些部分里的位置。
 
 > The split virtqueue format separates the virtqueue into several parts, where each part is write-able by either the driver or the device, but not both. Multiple parts and/or locations within a part need to be updated when making a buffer available and when marking it as used.
 
-每个队列都有一个 16 位的队列大小参数，它设置条目数并暗示队列的总大小。
+每个队列都有一个 16 位的队列长度参数，它设置条目数并暗示队列的总大小。
 
 > Each queue has a 16-bit queue size parameter, which sets the number of entries and implies the total size of the queue.
 
@@ -495,9 +499,13 @@ split virtqueue 格式将虚拟队列分成几个部分，其中每个部分可�
 
 > The Size column gives the total number of bytes for each part of the virtqueue.
 
-队列尺寸对应于虚拟队列^2^中的最大缓冲区数。队列尺寸值始终是 2 的幂。最大队列尺寸值为 32768。指定此值的方式取决于总线。
+队列长度对应于虚拟队列^2^中的最大缓冲区数。队列长度值始终是 2 的幂。最大队列长度值为 32768。指定此值的方式取决于总线。
 
-> Queue Size corresponds to the maximum number of buffers in the virtqueue2. Queue Size value is always a power of 2. The maximum Queue Size value is 32768. This value is specified in a bus-specific way.
+> Queue Size corresponds to the maximum number of buffers in the virtqueue^2^. Queue Size value is always a power of 2. The maximum Queue Size value is 32768. This value is specified in a bus-specific way.
+
+> 例如，如果队列大小为 4，那么在任何时刻最多可以有 4 个缓冲区排队。
+>
+> > 2 For example, if Queue Size is 4 then at most 4 buffers can be queued at any given time.
 
 当驱动程序想要向设备发送缓冲区时，它会填充描述符表中的一个槽（或将几个链接在一起），并将描述符索引写入可用的环中。然后它通知设备。当设备完成一个缓冲区时，它会将描述符索引写入已使用的环，并发送已使用缓冲区的通知。
 
@@ -507,7 +515,7 @@ split virtqueue 格式将虚拟队列分成几个部分，其中每个部分可�
 
 > 2.7.1 Driver Requirements: Virtqueues
 
-驱动程序必须确保每个虚拟队列部分的第一个字节的物理地址是上表中指定对齐值的倍数。
+驱动程序**必须**确保每个虚拟队列部分的第一个字节的物理地址是上表中指定对齐值的倍数。
 
 > The driver MUST ensure that the physical address of the first byte of each virtqueue part is a multiple of the specified alignment value in the above table.
 
@@ -523,13 +531,13 @@ split virtqueue 格式将虚拟队列分成几个部分，其中每个部分可�
 
 > Each virtqueue occupies two or more physically-contiguous pages (usually defined as 4096 bytes, but depending on the transport; henceforth referred to as Queue Align) and consists of three parts:
 
-| 描述符表 | 可用环（填充……）| 已用环
+| 描述符表 | 可用环（…填充…）| 已用环
 | ------- | ------------- | -
 
 > | Descriptor Table | Available Ring (...padding...) | Used Ring
 > | ---------------- | ------------------------------ | -
 
-特定于总线的队列大小字段控制虚拟队列的总字节数。当使用旧版接口时，过渡驱动程序必须从设备中检索队列大小字段，并且必须根据以下公式为虚拟队列分配总字节数（队列对齐在 qalign 中给出，队列大小在 qsz 中给出）：
+特定于总线的队列长度字段控制虚拟队列的总字节数。当使用旧版接口时，过渡驱动程序**必须**从设备中检索队列大小字段，并且**必须**根据以下公式为虚拟队列分配总字节数（队列对齐在 `qalign` 中给出，队列长度在 `qsz` 中给出）：
 
 > The bus-specific Queue Size field controls the total number of bytes for the virtqueue. When using the legacy interface, the transitional driver MUST retrieve the Queue Size field from the device and MUST allocate the total number of bytes for the virtqueue according to the following formula (Queue Align given in qalign and Queue Size given in qsz):
 
@@ -606,11 +614,11 @@ struct virtq {
 
 > 2.7.4.3 Legacy Interface: Message Framing
 
-遗憾的是，最初的驱动程序实现使用了简单的布局，并且设备开始依赖它，尽管有这个规范的措辞。此外，virtio_blk SCSI 命令的规范要求来自帧边界的直观字段长度（参见 5.2.6.3 旧版接口：设备操作）。
+遗憾的是，最初的驱动程序实现使用了简单的布局，并且设备开始依赖它，尽管有这个规范的措辞。此外，virtio_blk SCSI 命令的规范要求来自帧边界的直观字段长度（参见 [5.2.6.3 旧版接口：设备操作](todo.md)）。
 
 > Regrettably, initial driver implementations used simple layouts, and devices came to rely on it, despite this specification wording. In addition, the specification for virtio_blk SCSI commands required intuiting field lengths from frame boundaries (see 5.2.6.3 Legacy Interface: Device Operation).
 
-因此，当使用传统接口时，VIRTIO_F_ANY_LAYOUT 功能向设备和驱动程序指示没有对帧进行任何假设。未协商时对过渡驱动程序的要求包含在每个设备部分中。
+因此，当使用传统接口时，VIRTIO_F_ANY_LAYOUT 功能向设备和驱动程序指示没有对帧进行任何假设。如果未协商，则过渡驱动程序遵循包含在每个设备部分中的要求。
 
 > Thus when using the legacy interface, the VIRTIO_F_ANY_LAYOUT feature indicates to both the device and the driver that no assumptions were made about framing. Requirements for transitional drivers when this is not negotiated are included in each device section.
 
@@ -618,7 +626,7 @@ struct virtq {
 
 > 2.7.5 The Virtqueue Descriptor Table
 
-描述符表是指驱动程序用于设备的缓冲区。addr 是物理地址，缓冲区可以通过 next 链接。每个描述符都描述了一个缓冲区，该缓冲区对于设备是只读的（“设备可读”）或对于设备是只写的（“设备可写”），但描述符链可以同时包含设备可读和设备可写缓冲区。
+描述符表是指驱动程序用于设备的缓冲区。`addr` 是物理地址，缓冲区可以通过 `next` 链接。每个描述符都描述了一个缓冲区，该缓冲区对于设备是只读的（“设备可读”）或对于设备是只写的（“设备可写”），但描述符链可以同时包含设备可读和设备可写缓冲区。
 
 > The descriptor table refers to the buffers the driver is using for the device. addr is a physical address, and the buffers can be chained via next. Each descriptor describes a buffer which is read-only for the device (“device-readable”) or write-only for the device (“device-writable”), but a chain of descriptors can contain both device-readable and device-writable buffers.
 
@@ -645,11 +653,11 @@ struct virtq_desc {
 };
 ```
 
-表中描述符的数量由该虚拟队列的队列大小定义：这是最大可能的描述符链长度。
+表中描述符的数量由该虚拟队列的队列长度定义：这是最大可能的描述符链长度。
 
 > The number of descriptors in the table is defined by the queue size for this virtqueue: this is the maximum possible descriptor chain length.
 
-如果 VIRTIO_F_IN_ORDER 已经协商好，驱动程序使用环形顺序的描述符：从表中的偏移量 0 开始，并在表的末尾环绕。
+如果 VIRTIO_F_IN_ORDER 已经协商好，驱动程序使用环形顺序的描述符：从表中的偏移量 0 开始，并在表的末尾回绕。
 
 > If VIRTIO_F_IN_ORDER has been negotiated, driver uses descriptors in ring order: starting from offset 0 in the table, and wrapping around at the end of the table.
 
@@ -754,7 +762,7 @@ struct virtq_avail {
     # define VIRTQ_AVAIL_F_NO_INTERRUPT 1
     le16 flags;
     le16 idx;
-    le16 ring[ /* 队列尺寸 Queue Size */ ];
+    le16 ring[ /* 队列长度 Queue Size */ ];
     le16 used_event; /* 除非 VIRTIO_F_EVENT_IDX Only if VIRTIO_F_EVENT_IDX */
 };
 ```
@@ -1241,3 +1249,7 @@ for (;;) {
     vq->last_seen_used++;
 }
 ```
+
+## 2.8 紧实虚拟队列
+
+> 2.8 Packed Virtqueues
