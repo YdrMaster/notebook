@@ -6,3 +6,7 @@
 2. WIP [2 virtio 设备的基本功能](ch2.md)
 3. WIP [一般初始化和设备操作](ch3.md)
 4. WIP [虚拟 IO 设备传输选项](ch4.md)
+
+## 参考资料
+
+- <https://kernelgo.org/virtio-overview.html>

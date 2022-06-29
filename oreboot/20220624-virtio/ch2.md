@@ -749,7 +749,7 @@ struct indirect_descriptor_table {
 >
 > > Note: While unusual (most implementations either create a chain solely using non-indirect descriptors, or use a single indirect element), such a layout is valid.
 
-### 2.7.6 Virtqueue 可用环
+### 2.7.6 虚拟队列可用环
 
 > 2.7.6 The Virtqueue Available Ring
 
@@ -1082,7 +1082,7 @@ Linux 内核源代码在 include/uapi/linux/virtio_ring.h 中包含上述定义�
 >
 > > Note: As an example, the simplest virtio network device has two virtqueues: the transmit virtqueue and the receive virtqueue. The driver adds outgoing (device-readable) packets to the transmit virtqueue, and then frees them after they are used. Similarly, incoming (device-writable) buffers are added to the receive virtqueue, and processed after they are used.
 
-以下是更详细地使用 split 虚拟队列格式时对这两个部分的要求。
+以下是更详细地使用分散虚拟队列格式时对这两个部分的要求。
 
 > What follows is the requirements of each of these two parts when using the split virtqueue format in more detail.
 
