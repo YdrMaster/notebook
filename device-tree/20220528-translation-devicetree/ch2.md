@@ -790,3 +790,177 @@ DMA 范围属性值的格式是（子总线地址、父总线地址、长度）�
 设备类型属性在 IEEE 1275 中用于描述设备的 FCode 编程模型。由于 DTSpec 没有 FCode，因此不推荐使用该属性的新用途，并且它应该仅包含在 cpu 和内存节点上，以便与 IEEE 1275 派生的设备树兼容。
 
 > The device_type property was used in IEEE 1275 to describe the device’s FCode programming model. Because DTSpec does not have FCode, new use of the property is deprecated, and it should be included only on cpu and memory nodes for compatibility with IEEE 1275–derived devicetrees.
+
+## 2.4 中断和中断映射
+
+> 2.4 Interrupts and Interrupt Mapping
+
+DTSpec 采用中断树模型来表示开放固件推荐实践中指定的中断：中断映射，版本 0.9 \[b7\]。在设备树中存在一个逻辑中断树，它表示平台硬件中中断的层次结构和路由。虽然通常称为中断树，但从技术上讲，它是有向无环图。
+
+> DTSpec adopts the interrupt tree model of representing interrupts specified in Open Firmware Recommended Practice: Interrupt Mapping, Version 0.9 \[b7\]. Within the devicetree a logical interrupt tree exists that represents the hierarchy and routing of interrupts in the platform hardware. While generically referred to as an interrupt tree it is more technically a directed acyclic graph.
+
+中断源到中断控制器的物理连接在设备树中以 `interrupt-parent` 属性表示。代表中断生成设备的节点包含一个 `interrupt-parent` 属性，该属性具有一个 `phandle` 值，该值指向设备的中断被路由到的设备，通常是中断控制器。如果产生中断的设备没有`interrupt-parent` 属性，则假定其中断父级为其设备树父级。
+
+> The physical wiring of an interrupt source to an interrupt controller is represented in the devicetree with the interrupt-parent property. Nodes that represent interrupt-generating devices contain an interrupt-parent property which has a phandle value that points to the device to which the device’s interrupts are routed, typically an interrupt controller. If an interrupt-generating device does not have an interrupt-parent property, its interrupt parent is assumed to be its devicetree parent.
+
+每个中断生成设备都包含一个中断属性，其值描述该设备的一个或多个中断源。每个源都用称为中断说明符的信息表示。中断说明符的格式和含义是特定于中断域的，即，它取决于其中断域根节点上的属性。中断域的根使用 `#interrupt-cells` 属性来定义编码中断说明符所需的 `<u32>` 值的数量。例如，对于 Open PIC 中断控制器，中断说明符采用两个 32 位值，由中断号和中断电平/检测信息组成。
+
+> Each interrupt generating device contains an interrupts property with a value describing one or more interrupt sources for that device. Each source is represented with information called an interrupt specifier. The format and meaning of an interrupt specifier is interrupt domain specific, i.e., it is dependent on properties on the node at the root of its interrupt domain. The #interrupt-cells property is used by the root of an interrupt domain to define the number of `<u32>` values needed to encode an interrupt specifier. For example, for an Open PIC interrupt controller, an interrupt-specifer takes two 32-bit values and consists of an interrupt number and level/sense information for the interrupt.
+
+中断域是解释中断说明符的上下文。域的根是中断控制器（1）或中断连接（2）。
+
+> An interrupt domain is the context in which an interrupt specifier is interpreted. The root of the domain is either (1) an interrupt controller or (2) an interrupt nexus.
+
+1. 中断控制器是一个物理设备，需要一个驱动程序来处理通过它路由的中断。它也可能级联到另一个中断域。中断控制器由设备树中该节点上存在的中断控制器属性指定。
+2. 中断连接定义了一个中断域和另一个中断域之间的转换。翻译基于特定领域和特定总线的信息。域之间的这种转换是使用中断映射属性执行的。例如，PCI 控制器设备节点可以是定义从 PCI 中断名称空间（INTA、INTB 等）到具有中断请求（IRQ）编号的中断控制器的转换的中断连接。
+
+> 1. An interrupt controller is a physical device and will need a driver to handle interrupts routed through it. It may also cascade into another interrupt domain. An interrupt controller is specified by the presence of an interrupt-controller property on that node in the devicetree.
+> 2. An interrupt nexus defines a translation between one interrupt domain and another. The translation is based on both domain-specific and bus-specific information. This translation between domains is performed with the interrupt-map property. For example, a PCI controller device node could be an interrupt nexus that defines a translation from the PCI interrupt namespace (INTA, INTB, etc.) to an interrupt controller with Interrupt Request (IRQ) numbers.
+
+当中断树的遍历到达没有中断属性且因此没有显式中断父节点的中断控制器节点时，确定中断树的根。
+
+> The root of the interrupt tree is determined when traversal of the interrupt tree reaches an interrupt controller node without an interrupts property and thus no explicit interrupt parent.
+
+请参见图 2.3 中的设备树图形表示示例，其中显示了中断父关系。它显示了设备树的自然结构以及每个节点在逻辑中断树中的位置。
+
+> See Fig. 2.3 for an example of a graphical representation of a devicetree with interrupt parent relationships shown. It shows both the natural structure of the devicetree as well as where each node sits in the logical interrupt tree.
+
+![2.3](2.3.png)
+
+> **NOTICE** 这个图来自 0.3 版，因为在 0.4-rc1 中缺失
+
+在图 2.3 所示的示例中：
+
+> In the example shown in Fig. 2.3:
+
+- open-pic 中断控制器是中断树的根。
+- 中断树根有三个子节点——将它们的中断直接路由到 open-pic 的设备
+  - 设备 1
+  - PCI 主机控制器
+  - GPIO 控制器
+- 存在三个中断域；一个植根于 open-pic 节点，一个植根于 PCI 主机桥节点，一个植根于 GPIO 控制器节点。
+- 有两个连接节点；一个在 PCI 主机桥上，一个在 GPIO 控制器上。
+
+> - The open-pic interrupt controller is the root of the interrupt tree.
+> - The interrupt tree root has three children—devices that route their interrupts directly to the open-pic
+>   - device1
+>   - PCI host controller
+>   - GPIO Controller
+> - Three interrupt domains exist; one rooted at the open-pic node, one at the PCI host bridge node, and one at the GPIO Controller node.
+> - There are two nexus nodes; one at the PCI host bridge and one at the GPIO controller.
+
+### 2.4.1 产生中断的设备的属性
+
+> 2.4.1 Properties for Interrupt Generating Devices
+
+#### `interrupts`
+
+属性：`interrupts`
+
+值类型：`<prop-encoded-array>` 编码任意数量的中断说明符
+
+描述：
+
+设备节点的 `interrupts` 属性定义了设备生成的一个或多个中断。`interrupts` 属性的值由任意数量的中断说明符组成。中断说明符的格式由中断域根的绑定定义。
+
+> The `interrupts` property of a device node defines the interrupt or interrupts that are generated by the device. The value of the `interrupts` property consists of an arbitrary number of interrupt specifiers. The format of an interrupt specifier is defined by the binding of the interrupt domain root.
+
+`interrupts` 被 `interrupts-extended` 属性覆盖，通常只能使用其中一个。
+
+> `interrupts` is overridden by the `interrupts-extended` property and normally only one or the other should be used.
+
+示例:
+
+开放 PIC 兼容中断域中中断说明符的常见定义由两个单元组成；中断号和电平/感应信息。请参见以下示例，该示例定义了一个中断说明符，中断号为 0xA，电平/感应编码为 8。
+
+> A common definition of an interrupt specifier in an open PIC–compatible interrupt domain consists of two cells; an interrupt number and level/sense information. See the following example, which defines a single interrupt specifier, with an interrupt number of 0xA and level/sense encoding of 8.
+
+```dts
+interrupts = <0xA 8>;
+```
+
+#### `interrupt-parent`
+
+属性：`interrupt-parent`
+
+值类型：`<phandle>`
+
+描述：
+
+由于中断树中节点的层次结构可能与设备树不匹配，因此可以使用 `interrupt-parent` 属性来明确定义中断父级。该值是中断父节点的 `phandle`。如果设备中缺少此属性，则假定其中断父级为其设备树父级。
+
+> Because the hierarchy of the nodes in the interrupt tree might not match the devicetree, the `interrupt-parent` property is available to make the definition of an interrupt parent explicit. The value is the `phandle` to the interrupt parent. If this property is missing from a device, its interrupt parent is assumed to be its devicetree parent.
+
+#### `interrupts-extended`
+
+属性：`interrupts-extended`
+
+值类型：`<phandle>` `<prop-encoded-array>`
+
+描述：
+
+`interrupts-extended` 属性列出了设备产生的中断。当设备连接到多个中断控制器时，应该使用 `interrupts-extended` 代替 `interrupts`，因为它为每个中断说明符都编码一个父 `phandle`。
+
+> The `interrupts-extended` property lists the interrupt(s) generated by a device. `interrupts-extended` should be used instead of `interrupts` when a device is connected to multiple interrupt controllers as it encodes a parent phandle with each interrupt specifier.
+
+示例：
+
+此示例显示了具有连接到两个独立中断控制器的两个中断输出的设备如何使用中断扩展属性来描述连接。*pic* 是 `#interrupt-cells` 说明符为 2 的中断控制器，而 *gic* 是 `#interrupts-cells` 说明符为 1 的中断控制器。
+
+> This example shows how a device with two interrupt outputs connected to two separate interrupt controllers would describe the connection using an interrupts-extended property. pic is an interrupt controller with an `#interrupt-cells` specifier of 2, while gic is an interrupt controller with an `#interrupts-cells` specifier of 1.
+
+```dts
+interrupts-extended = <&pic 0xA 8>, <&gic 0xda>;
+```
+
+`interrupts` 和 `interrupts-extended` 属性是互斥的。设备节点应该使用其中之一，但不能同时使用两者。只有在需要与 `interrupts-extended` 中断扩展的软件兼容时才允许使用两者。如果 `interrupts-extended` 和 `interrupts` 都存在，则 `interrupts-extended` 优先。
+
+> The `interrupts` and `interrupts-extended` properties are mutually exclusive. A device node should use one or the other, but not both. Using both is only permissible when required for compatibility with software that does not understand interrupts-extended. If both interrupts-extended and interrupts are present then interrupts-extended takes precedence.
+
+### 2.4.2 中断控制器的属性
+
+> 2.4.2 Properties for Interrupt Controllers
+
+#### `#interrupt-cells`
+
+属性：`#interrupt-cells`
+
+值类型：`<u32>`
+
+描述：
+
+`#interrupt-cells` 属性定义了为中断域编码中断说明符所需的单元数。
+
+> The `#interrupt-cells` property defines the number of cells required to encode an interrupt specifier for an interrupt domain.
+
+#### `interrupt-controller`
+
+属性：`interrupt-controller`
+
+值类型：`<empty>`
+
+描述：
+
+中断控制器属性的存在将节点定义为中断控制器节点。
+
+> The presence of an interrupt-controller property defines a node as an interrupt controller node.
+
+### 2.4.3 中断连接属性
+
+> 2.4.3 Interrupt Nexus Properties
+
+中断连接节点应具有 `#interrupt-cells` 属性。
+
+> An interrupt nexus node shall have an #interrupt-cells property.
+
+#### `interrupt-map`
+
+属性：`interrupt-map`
+
+值类型：`<prop-encoded-array>` 编码任意数量的中断映射条目。
+
+描述：
+
+`interrupt-map` 是连接节点上的一个属性，它将一个中断域与一组父中断域桥接，并指定子域中的中断说明符如何映射到它们各自的父域。
+
+> An `interrupt-map` is a property on a nexus node that bridges one interrupt domain with a set of parent interrupt domains and specifies how interrupt specifiers in the child domain are mapped to their respective parent domains.

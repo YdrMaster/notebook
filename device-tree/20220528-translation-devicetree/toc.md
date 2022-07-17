@@ -1,4 +1,9 @@
-﻿# 设备树规范 Release v0.3-40-g7e1cc17
+﻿# 设备树规范 Release
+
+- 版本号：v0.3-40-g7e1cc17
+- 发布版本：[v0.4-rc1](https://github.com/devicetree-org/devicetree-specification/releases/tag/v0.4-rc1)
+
+## 目录
 
 - [第一章 简介](ch1.md)
 - [第二章 设备树](ch2.md)
