@@ -905,7 +905,7 @@ interrupts = <0xA 8>;
 
 示例：
 
-此示例显示了具有连接到两个独立中断控制器的两个中断输出的设备如何使用中断扩展属性来描述连接。*pic* 是 `#interrupt-cells` 说明符为 2 的中断控制器，而 *gic* 是 `#interrupts-cells` 说明符为 1 的中断控制器。
+此示例显示了具有连接到两个独立中断控制器的两个中断输出的设备如何使用中断扩展属性来描述连接。*pic* 是 `#interrupt-cells` 属性为 2 的中断控制器，而 *gic* 是 `#interrupts-cells` 属性为 1 的中断控制器。
 
 > This example shows how a device with two interrupt outputs connected to two separate interrupt controllers would describe the connection using an interrupts-extended property. pic is an interrupt controller with an `#interrupt-cells` specifier of 2, while gic is an interrupt controller with an `#interrupts-cells` specifier of 1.
 
@@ -913,7 +913,7 @@ interrupts = <0xA 8>;
 interrupts-extended = <&pic 0xA 8>, <&gic 0xda>;
 ```
 
-`interrupts` 和 `interrupts-extended` 属性是互斥的。设备节点应该使用其中之一，但不能同时使用两者。只有在需要与 `interrupts-extended` 中断扩展的软件兼容时才允许使用两者。如果 `interrupts-extended` 和 `interrupts` 都存在，则 `interrupts-extended` 优先。
+`interrupts` 和 `interrupts-extended` 属性是互斥的。设备节点应该使用其中之一，但不能同时使用两者。只有在需要与不理解 `interrupts-extended` 的软件兼容时才允许使用两者。如果 `interrupts-extended` 和 `interrupts` 都存在，则 `interrupts-extended` 优先。
 
 > The `interrupts` and `interrupts-extended` properties are mutually exclusive. A device node should use one or the other, but not both. Using both is only permissible when required for compatibility with software that does not understand interrupts-extended. If both interrupts-extended and interrupts are present then interrupts-extended takes precedence.
 
