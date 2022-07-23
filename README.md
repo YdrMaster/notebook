@@ -16,6 +16,7 @@
     - 20220509-[【翻译】SBI 规范](zCore/20220509-translation-riscv-sbi/toc.md)
     - 20220515-[对编译选项 `relocation-model` 的讨论](zCore/20220515-pic.md)
     - 20220601-[【翻译】RISCV 规范-原子内存操作](zCore/20220601-amo.md)
+    - 20220723-[【报告】零开销页表库和设备树库在 zCore RISC-V 启动流程中的使用](zCore/20220723-presentation.md)
 
 - [`oreboot`](oreboot)
   - 20220415-[deprecated](oreboot/20220415-summary.md)
