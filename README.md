@@ -1,21 +1,14 @@
 ﻿# 笔记
 
-- [随笔](随笔)
-  - [Rust 的目的](随笔/20220722-jotting.md)
-
-- [学习 `rCore3.0`](rCore3.0)
-  - [第三章](rCore3.0/20220312-lab3.md)
-  - [微软研究院锐评 `fork`（第五章参考文献）](rCore3.0/20220330-get-fork-out-of-my-os.md)
-
-- [`zCore`](zCore)
-  - [用户态驱动](zCore/user-mode-driver/20220415-summary.md)
+- [随笔](/随笔/toc.md)
+- [翻译](/tranlation/toc.md)
+- [`zCore`](/zCore)
+  - [rCore-Tutorial-v3 lab3 笔记](/zCore/20220312-lab3.md)
+  - [用户态驱动](/zCore/user-mode-driver/20220415-summary.md)
   - 笔记
     - 20220418-[`zCore` 与 `rCore(v3)` 内存布局的区别](zCore/20220418-difference-of-memory-between-zcore-and-rcore-v3/doc.md)
-    - 20220418-[【翻译】RISCV 特权级规范-寻址及内存保护](zCore/20220418-translation/doc.md)
     - 20220421-[RISC-V `la` 伪指令的理解](zCore/20220421-riscv-la.md)
-    - 20220509-[【翻译】SBI 规范](zCore/20220509-translation-riscv-sbi/toc.md)
     - 20220515-[对编译选项 `relocation-model` 的讨论](zCore/20220515-pic.md)
-    - 20220601-[【翻译】RISCV 规范-原子内存操作](zCore/20220601-amo.md)
     - 20220723-[【报告】零开销页表库和设备树库在 zCore RISC-V 启动流程中的使用](zCore/20220723-presentation.md)
 
 - [`oreboot`](oreboot)
@@ -28,12 +21,25 @@
   - 20220528-[利用可编程的 SRAM 实现超级加速](oreboot/20220528-sram.md)
   - 20220607-[DDR 初始化](oreboot/20220607-ddr-init.md)
   - 20220617-[可退出式 SBI 和基于 SBI 引导的思路](oreboot/20220617-design.md)
-  - 20220624-[【翻译】虚拟 IO 设备标准 v1.2](oreboot/20220624-virtio/toc.md)
-
-- [设备树](device-tree)
-  - 20220528-[讨论设备树解析的写法](device-tree/20220528-device-tree.md)
-  - 20220528-[【翻译】设备树规范](device-tree/20220528-translation-devicetree/toc.md)
 
 - [咨询记录](consult-journal)
-  - [洛佳](consult-journal/LuoJia.md)
-  - [ZYR](consult-journal/ZYR.md)
+
+## 等待队列
+
+协程等待队列：没干完且短时间内不打算干的事。
+
+### 翻译
+
+- 20220330-[微软研究院锐评 `fork`](/tranlation/20220330-get-fork-out-of-my-os.md)
+  > 需要实现 `fork` 的时候写完
+- 20220509-[SBI 规范 v1.0](/tranlation/20220509-riscv-sbi-v1/toc.md)
+  > 用什么写什么
+- 20220528-[设备树规范](/tranlation/20220528-devicetree/toc.md)
+  > 用什么写什么
+- 20220624-[虚拟 IO 设备标准 v1.2](/tranlation/20220624-virtio/toc.md)
+  > 用什么写什么
+
+### 设计
+
+- 20220818-[动态内核堆](/随笔/20220818-dynamic-kernel-heap.md)
+  > 难度比较大，找个大佬讨论
