@@ -6,3 +6,4 @@
 - 20220528-[设备树规范](/tranlation/20220528-devicetree/toc.md)
 - 20220601-[RISCV 规范-原子内存操作](/tranlation/20220601-amo.md)
 - 20220624-[虚拟 IO 设备标准 v1.2](/tranlation/20220624-virtio/toc.md)
+- 20220829-[面向数据编程——通过重新认识数据降低复杂度](/tranlation/20220829-dop/toc.md)
