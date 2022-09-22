@@ -34,6 +34,38 @@
 
 > Second, and more importantly, Theseus contributes the intralingual OS design approach, which entails matching the OS’s execution environment to the runtime model of its implementation language and implementing the OS itself using language-level mechanisms. Through intralingual design, Theseus empowers the compiler to apply its safety checks to OS code with no gaps in its understanding of code behavior, and shifts semantic errors from runtime failures into compile-time errors, both to a greater degree than existing OSes. Intralingual design goes beyond safety, enabling the compiler to statically check OS semantic invariants and assume resource bookkeeping duties. This is elaborated in §4.
 
-忒修斯的结构和内部语言设计自然地减少了操作系统必须维护的状态，减少了其组件之间的状态溢出。我们在第 5 节中描述了忒修斯的状态管理技术，以进一步减轻状态溢出的影响。为了证明忒修斯设计的实用性，我们在其中实现了实时演进和故障恢复（为了可用性）（§6）。有了这些，我们认为忒修斯非常适用于高端嵌入式系统和数据中心组件，在没有硬件冗余的情况下，或者在硬件冗余之外，需要可用性。在这里，忒修斯作为一个新的操作系统和需要安全语言程序的限制影响较小，因为应用程序可以在一个操作者控制的环境中与操作系统共同开发。
+忒修斯的结构和内部语言设计自然地减少了操作系统必须维护的状态，减少了其组件之间的状态溢出。我们在第 5 节中描述了忒修斯的状态管理技术，以进一步减轻状态溢出的影响。
 
-> Theseus’s structure and intralingual design naturally reduce states the OS must maintain, reducing state spill between its components. We describe Theseus’s state management techniques to further mitigate the effects of state spill in §5. To demonstrate the utility of Theseus’s design, we implement live evolution and fault recovery (for availability) within it (§6). With this, we posit that Theseus is well-suited for highend embedded systems and datacenter components, where availability is needed in the absence of or in addition to hardware redundancy. Therein, Theseus’s limitations of being a new OS and needing safe-language programs have a lesser impact, as applications can be co-developed with the OS in an environment under a single operator’s control.
+> Theseus’s structure and intralingual design naturally reduce states the OS must maintain, reducing state spill between its components. We describe Theseus’s state management techniques to further mitigate the effects of state spill in §5.
+
+为了证明忒修斯设计的实用性，我们在其中实现了实时演进和故障恢复（用于可用性）（§6）。有了这些，我们认为忒修斯非常适用于高端嵌入式系统和数据中心组件，在这些地方需要在没有硬件冗余的情况下或在硬件冗余之外有可用性。在这里，忒修斯作为一个新的操作系统和需要安全语言程序的限制影响较小，因为应用程序可以在一个操作者控制的环境中与操作系统共同开发。
+
+> To demonstrate the utility of Theseus’s design, we implement live evolution and fault recovery (for availability) within it (§6). With this, we posit that Theseus is well-suited for highend embedded systems and datacenter components, where availability is needed in the absence of or in addition to hardware redundancy. Therein, Theseus’s limitations of being a new OS and needing safe-language programs have a lesser impact, as applications can be co-developed with the OS in an environment under a single operator’s control.
+
+我们在第 7 节中评估了忒修斯实现这些目标的情况。通过一组案例研究，我们展示了忒修斯可以轻松、任意地对核心系统组件进行实时演进，其方式超出了先前的实时更新工作，例如，应用程序-内核联合演进，或微内核级组件的演进。由于忒修斯可以优雅地处理语言级故障（Rust 中的 panics），我们展示了忒修斯容忍在操作系统内核中出现的更具挑战性的瞬时硬件故障的能力。为此，我们对忒修斯中的故障表现和恢复进行了研究，并与 MINIX 3 对必然存在于微内核中的组件的故障恢复进行了比较。虽然性能不是忒修斯的主要目标，但我们发现其内部语言和无溢出设计并没有带来明显的性能损失，但其影响在不同的子系统中有所不同。
+
+> We evaluate how well Theseus achieves these goals in §7. Through a set of case studies, we show that Theseus can easily and arbitrarily live evolve core system components in ways beyond prior live update works, e.g., joint application-kernel evolution, or evolution of microkernel-level components. As Theseus can gracefully handle language-level faults (panics in Rust), we demonstrate Theseus’s ability to tolerate more challenging transient hardware faults that manifest in the OS core. To this end, we present a study of fault manifestation and recovery in Theseus and a comparison with MINIX 3 of fault recovery for components that necessarily exist inside the microkernel. Although performance is not a primary goal of Theseus, we find that its intralingual and spill-free designs do not impose a glaring performance penalty, but that the impact varies across subsystems.
+
+忒修斯目前在 x86_64 上实现，支持大多数硬件特性，如多核处理、抢占式多任务、SIMD 扩展、基本网络和磁盘 I/O 以及图形显示。它代表了大约 4 个人年的努力，包括大约 38000 行从头开始的 Rust 代码，900 行引导汇编代码，246 个板块，其中 176 个是第一方，以及 21 个板块的 72 个不安全代码块或语句，其中大部分是用于端口 I/O 或特殊寄存器访问。
+
+> Theseus is currently implemented on x86_64 with support for most hardware features, such as multicore processing, preemptive multitasking, SIMD extensions, basic networking and disk I/O, and graphical displays. It represents roughly four person-years of effort and comprises ~38000 lines of from-scratch Rust code, 900 lines of bootstrap assembly code, 246 crates of which 176 are first-party, and 72 unsafe code blocks or statements across 21 crates, most of which are for port I/O or special register access.
+
+然而，忒修斯远没有商业系统或实验性系统（如 Singularity \[33\] 和 Barrelfish \[8\]）那样完整，后者经历了大量的开发。例如，忒修斯目前缺乏 POSIX 支持和完整的标准库。因此，我们不对某些操作系统方面提出主张，例如效率或安全性；本文着重于忒修斯的结构和语言内设计，以及随之而来的对热更新和故障恢复的好处。
+
+> However, Theseus is far less complete than commercial systems, or experimental ones such as Singularity \[33\] and Barrelfish \[8\] that have undergone substantially more development. For example, Theseus currently lacks POSIX support and a full standard library. Thus, we do not make claims about certain OS aspects, e.g., efficiency or security; this paper focuses on Theseus’s structure and intralingual design and the ensuing benefits for live evolution and fault recovery.
+
+忒修斯的代码和文档是开源的\[61\]。
+
+> Theseus’s code and documentation are open-source \[61\].
+
+## 2 Rust 语言背景
+
+> 2 Rust Language Background
+
+Rust 编程语言\[40\]的设计是为了在编译时提供强大的类型和内存安全保证，将高级管理语言的力量和表现力与没有垃圾收集或底层运行时的 C 语言的效率结合起来。忒修斯利用许多 Rust 特性来实现内部语言、安全的操作系统设计，并采用板块（crate），即 Rust 的项目容器和翻译单元，以实现源级模块化。板块包含源代码和依赖清单。忒修斯不使用 Rust 的标准库，但使用其 core 库和 alloc 库。
+
+> The Rust programming language [40] is designed to provide strong type and memory safety guarantees at compile time, combining the power and expressiveness of a high-level managed language with the C-like efficiency of no garbage collection or underlying runtime. Theseus leverages many Rust features to realize an intralingual, safe OS design and employs the crate, Rust’s project container and translation unit, for source-level modularity. A crate contains source code and a dependency manifest. Theseus does not use Rust’s standard library but does use its fundamental core and alloc libraries.
+
+Rust 的所有权模型是其编译时内存安全和管理的关键。所有权是基于仿射类型的，其中一个值最多可以使用一次。在 Rust 中，每个值都有一个所有者，例如，下面 L4 中分配的字符串值 "hello!" 是属于 hello 变量的。在一个值被移动后，例如，如果 "hello!" 在 L5 中被从 hello 移动到 owned_string（L14），它的所有权将被转移，之前的所有者（hello）不能再使用它。
+
+> Rust’s ownership model is the key to its compile-time memory safety and management. Ownership is based on affine types, in which a value can be used at most once. In Rust, every value has an owner, e.g., the string value "hello!" allocated in L4 below is owned by the hello variable. After a value is moved, e.g., if "hello!" was moved in L5 from hello to owned_string (L14), its ownership would be transferred and the previous owner (hello) could no longer use it.
