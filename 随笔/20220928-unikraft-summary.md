@@ -59,7 +59,9 @@ unikraft 的应用程序列表里有 elfloader（第四行），用于从其他�
 
 unikraft 的模块化实际上是很 C 的。模块隔离基本上通过统一的方式进行：函数关联利用函数名的链接时绑定、状态关联利用静态变量的依赖注入。
 
-例如，作为内核内部模块的 nolibc，实际上只包含库级的实现代码。原本的“系统调用”现在只是函数声明，链接时实现会从其他库绑定过来。而 `ukalloc` 微库包含一个经典的依赖注入。
+例如，作为内核内部模块的 nolibc，实际上只包含库级的实现代码。原本的“系统调用”现在只是函数声明，链接时实现会从其他库绑定过来。
+
+`ukalloc` 微库则包含一套更完整的依赖注入流程。
 
 `unikraft/lib/ukalloc/alloc.c`：声明一个 `struct uk_alloc` 指针，这实际上是一个侵入式单链表。`uk_alloc_register` 函数向链表末尾压入一个新的分配器对象：
 
@@ -127,3 +129,34 @@ uk_palloc_compat
 uk_pfree_compat
 _uk_alloc_head
 ```
+
+## unikraft 的内核结构
+
+一个只编译过 helloworld 应用程序的 kraft 工作区的结构是这样：
+
+```bash
+.
+├── apps
+│   └── helloworld
+├── archs
+├── libs
+├── plats
+└── unikraft
+    ├── CODING_STYLE.md
+    ├── CONTRIBUTING.md
+    ├── COPYING.md
+    ├── Config.uk
+    ├── MAINTAINERS.md
+    ├── Makefile
+    ├── Makefile.uk
+    ├── README.md
+    ├── arch
+    ├── doc
+    ├── include
+    ├── lib
+    ├── plat
+    ├── support
+    └── version.mk
+```
+
+可以看到，helloworld 这个示例项目并不需要任何外部库，也没有设计特别的目标架构和平台，所以 archs、libs 和 plats 都是空的。apps 目录存放应用程序，unikraft 目录存放内核。unikraft 目录中又包含文档、构建系统和源码 3 部分。源码位于 arch、plat 和 lib 目录下。由于是 C 语言工程，还有一个 include 目录，里面放着 arch 和 plat 的头文件。lib 的头文件在每个 lib 内部，大概是为了方便互相引用。arch 里是少量平台相关的抽象，包括通用寄存器定义、同步原语之类的。plat 提供平台相关的引导、中断注册、驱动等。lib 提供各个内核模块。
