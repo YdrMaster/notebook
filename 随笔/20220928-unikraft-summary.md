@@ -53,7 +53,36 @@ unikraft 的应用程序列表里有 elfloader（第四行），用于从其他�
 
 而配置（库的 `Config.uk`、应用的 `kraft.yml`）只是充当一个人机接口的作用，以文本方式呈现方便人工修改。构建系统会从配置文件获取这些信息并生成真正的集成化配置，然后根据配置完成应用程序和库操作系统的联合构建。但实际上这只是构建系统的细节设计而已，完全可以认为配置就是构建系统的一部分。
 
-因此，实际上 unikraft 的架构表述完全可以修改为`构建系统 + 源码`，换句话说，只是为 C 重新包装了一个现代语言的标配结构，并没有任何特异之处。可以说，rust 基本上已经完成这个工作了。
+因此，实际上 unikraft 的架构表述完全可以修改为`构建系统 + 源码`。只是这个构建系统充分利用了 C 的底层特性，介入编译（设置编译选项）、链接过程（选择、替换链接库），实现了不修改源码就构造不同的内核。
+
+一个只编译过 helloworld 应用程序的 kraft 工作区的结构是这样：
+
+```bash
+.
+├── apps
+│   └── helloworld
+├── archs
+├── libs
+├── plats
+└── unikraft
+    ├── CODING_STYLE.md
+    ├── CONTRIBUTING.md
+    ├── COPYING.md
+    ├── Config.uk
+    ├── MAINTAINERS.md
+    ├── Makefile
+    ├── Makefile.uk
+    ├── README.md
+    ├── arch
+    ├── doc
+    ├── include
+    ├── lib
+    ├── plat
+    ├── support
+    └── version.mk
+```
+
+可以看到，helloworld 这个示例项目并不需要任何外部库，也没有设计特别的目标架构和平台，所以 archs、libs 和 plats 都是空的。apps 目录存放应用程序，unikraft 目录存放内核。unikraft 目录中又包含文档、构建系统和源码 3 部分。源码位于 arch、plat 和 lib 目录下。由于是 C 语言工程，还有一个 include 目录，里面放着 arch 和 plat 的头文件。lib 的头文件在每个 lib 内部，大概是为了方便互相引用。arch 里是少量平台相关的抽象，包括通用寄存器定义、同步原语之类的。plat 提供平台相关的引导、中断注册、驱动等。lib 提供各个内核模块。
 
 ## unikraft 的模块化
 
@@ -130,33 +159,26 @@ uk_pfree_compat
 _uk_alloc_head
 ```
 
-## unikraft 的内核结构
+rust 要想实现类似的抽象比较困难。rust 能用的依赖注入方式包括：
 
-一个只编译过 helloworld 应用程序的 kraft 工作区的结构是这样：
+- 源码依赖
 
-```bash
-.
-├── apps
-│   └── helloworld
-├── archs
-├── libs
-├── plats
-└── unikraft
-    ├── CODING_STYLE.md
-    ├── CONTRIBUTING.md
-    ├── COPYING.md
-    ├── Config.uk
-    ├── MAINTAINERS.md
-    ├── Makefile
-    ├── Makefile.uk
-    ├── README.md
-    ├── arch
-    ├── doc
-    ├── include
-    ├── lib
-    ├── plat
-    ├── support
-    └── version.mk
-```
+  优点是“正常”，缺点是子级依赖不方便替换。例如下图的情况：
 
-可以看到，helloworld 这个示例项目并不需要任何外部库，也没有设计特别的目标架构和平台，所以 archs、libs 和 plats 都是空的。apps 目录存放应用程序，unikraft 目录存放内核。unikraft 目录中又包含文档、构建系统和源码 3 部分。源码位于 arch、plat 和 lib 目录下。由于是 C 语言工程，还有一个 include 目录，里面放着 arch 和 plat 的头文件。lib 的头文件在每个 lib 内部，大概是为了方便互相引用。arch 里是少量平台相关的抽象，包括通用寄存器定义、同步原语之类的。plat 提供平台相关的引导、中断注册、驱动等。lib 提供各个内核模块。
+  ```text
+    A
+   / \
+  B   C
+       \
+       D/E
+  ```
+
+  只定制 A 的依赖无法影响 C 依赖的是 D 还是 E。要做这个选择，要么同时修改 C，要么给 C 添加编译选项。其实要求给 C 加编译选项确实是合理的，不过毕竟不像静态链接那样可以直接在最顶层替换任何一个库而不需要修改任何库，麻烦一点。
+
+- 动态依赖注入
+
+  优点是灵活、安全，缺点是需要在顶层改源码，并且有运行时开销。以 log 库为例，所有宏会调用最后一次 `set_logger` 设置的日志器，随时随地都可以调用。但是除了需要调用 `set_logger` 之外，这样做还导致每次调用额外的加锁解锁和两次寻址（指针寻址、虚表寻址），而且导致无法链接时优化。对于细粒度模块化的大量细碎函数来说，链接时优化应该影响会比较大。
+
+- 静态链接
+
+  包括 C++ 和 Rust 在内的所有会 mangle 函数名的现代语言都不提倡静态链接。并且静态链接会破坏同时使用一个库的多个版本的能力，强调工程性的现代语言很看重这一特性。另外还需要人为注意函数名对应，避免冲突。
