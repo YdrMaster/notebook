@@ -166,14 +166,14 @@ rust 要想实现类似的抽象比较困难。rust 能用的依赖注入方式�
   优点是“正常”，缺点是子级依赖不方便替换。例如下图的情况：
 
   ```text
-    A
-   / \
-  B   C
-       \
-       D/E
+  α
+   \
+    β
+     \
+     γ/δ
   ```
 
-  只定制 A 的依赖无法影响 C 依赖的是 D 还是 E。要做这个选择，要么同时修改 C，要么给 C 添加编译选项。其实要求给 C 加编译选项确实是合理的，不过毕竟不像静态链接那样可以直接在最顶层替换任何一个库而不需要修改任何库，麻烦一点。
+  只定制 α 的依赖无法影响 β 依赖的是 γ 还是 δ。要做这个选择，要么同时修改 β，要么给 β 添加编译选项在 α 里选择。其实加编译选项确实是合理的，即使是 C 语言对稍微复杂点的情况还是需要编译选项，比如另一个库可能不存在的情况。
 
 - 动态依赖注入
 
@@ -181,4 +181,115 @@ rust 要想实现类似的抽象比较困难。rust 能用的依赖注入方式�
 
 - 静态链接
 
-  包括 C++ 和 Rust 在内的所有会 mangle 函数名的现代语言都不提倡静态链接。并且静态链接会破坏同时使用一个库的多个版本的能力，强调工程性的现代语言很看重这一特性。另外还需要人为注意函数名对应，避免冲突。
+  包括 C++ 和 Rust 在内的所有会 mangle 函数名的现代语言都不提倡静态链接。并且静态链接会破坏同时使用一个库的多个版本的能力，强调工程性的现代语言很看重这一特性。另外还需要人为注意函数名对应，避免冲突。适用于使用极其广泛并且对性能要求较高的情况，比如 alloc。
+
+## 源码阅读
+
+### uktime
+
+这个微库提供计时和延时。还应该提供定时器，但目前全部没有实现。模块的结构如下：
+
+```bash
+.
+├── Config.uk
+├── Makefile.uk
+├── exportsyms.uk
+├── include
+│   └── uk
+├── musl-imported
+│   ├── COPYRIGHT
+│   ├── include
+│   └── src
+├── time.c
+└── timer.c
+```
+
+Config.uk 定义了微库元信息，可以看到它会提供 `HAVE_TIME`：
+
+```uk
+config LIBUKTIME
+       bool "uktime: Time functions"
+       default n
+       select HAVE_TIME
+```
+
+exportsyms.uk 导出符号表：
+
+| 符号 | 定义文件 | 备注
+| --- | ------- | -
+| clock_getres               | time.c   | `return 0`
+| clock_gettime              | time.c   | 调用 `ukplat_wall_clock` 或 `ukplat_wall_clock`
+| uk_syscall_e_clock_gettime |          |
+| uk_syscall_r_clock_gettime |          |
+| clock_settime              | time.c   | `return 0`
+| gettimeofday               | time.c   | 调用 `ukplat_wall_clock`
+| nanosleep                  | time.c   | !!!
+| uk_syscall_e_nanosleep     |          |
+| uk_syscall_r_nanosleep     |          |
+| setitimer                  | time.c   | `WARN_STUBBED`
+| sleep                      | time.c   | 调用 `nanosleep`
+| timegm                     | timegm.c | 库函数
+| times                      | time.c   | `errno = ENOTSUP`
+| usleep                     | time.c   | 调用 `nanosleep`
+| utime                      | time.c   | `return 0`
+| timer_create               | timer.c  | `errno = ENOTSUP`
+| timer_delete               | timer.c  | `errno = ENOTSUP`
+| timer_settime              | timer.c  | `errno = ENOTSUP`
+| timer_gettime              | timer.c  | `errno = ENOTSUP`
+| timer_getoverrun           | timer.c  | `errno = ENOTSUP`
+
+值得关注的只有 `nanosleep`：
+
+```c
+UK_SYSCALL_DEFINE(int, nanosleep, const struct timespec *, req, struct timespec *, rem)
+{
+  __nsec before, after, diff, nsec;
+
+  if (!req || req->tv_nsec < 0 || req->tv_nsec > 999999999) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  nsec = (__nsec)req->tv_sec * 1000000000L;
+  nsec += req->tv_nsec;
+  before = ukplat_monotonic_clock();
+
+#if CONFIG_HAVE_SCHED
+  uk_sched_thread_sleep(nsec);
+#else
+  __spin_wait(nsec);
+#endif
+
+  after = ukplat_monotonic_clock();
+  diff = after - before;
+
+  if (diff < nsec) {
+    if (rem) {
+      rem->tv_sec = ukarch_time_nsec_to_sec(nsec - diff);
+      rem->tv_nsec = ukarch_time_subsec(nsec - diff);
+    }
+    errno = EINTR;
+    return -1;
+  }
+  return 0;
+}
+```
+
+还是比较简单的，如果有调度器就让调度器区休眠，否则原地自旋等待。`__spin_wait` 的定义是：
+
+```c
+# ifndef CONFIG_HAVE_SCHED
+/* Workaround until Unikraft changes interface for something more
+ * sensible
+ */
+static void __spin_wait(__nsec nsec)
+{
+  __nsec until = ukplat_monotonic_clock() + nsec;
+
+  while (until > ukplat_monotonic_clock())
+    ukplat_lcpu_halt_to(until);
+}
+# endif
+```
+
+就是反复获取时间。
