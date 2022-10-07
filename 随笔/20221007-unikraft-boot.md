@@ -2,33 +2,61 @@
 
 ## 实验方法
 
-用 `kraft menuconfig`，可以配置 library-configuration/ukdebug/kernel-message-level，把日志级别配置成全部显示，以观察启动流程。
-
-qemu 上运行一个改过一些日志级别的 helloworld 效果大致为（格式经过微调）：
+用 `kraft menuconfig`，可以配置 library-configuration/ukdebug/kernel-message-level，把日志级别配置成全部显示，以观察启动流程。qemu 上运行 helloworld 输出：
 
 ```bash
 Booting from ROM..
 [    0.000000] Info: [libkvmplat] <setup.c @  268> Entering from KVM (x86)...
 [    0.000000] Info: [libkvmplat] <setup.c @  269>      multiboot: 0x9500
+[    0.000000] dbg:  [libkvmplat] <setup.c @  129> No initrd present
 [    0.000000] Info: [libkvmplat] <setup.c @  282>     heap start: 0x140000
 [    0.000000] Info: [libkvmplat] <setup.c @  287>      stack top: 0x7fd0000
 [    0.000000] Info: [libkvmplat] <setup.c @  301> Switch from bootstrap stack to stack @0x7fe0000
-[    0.000000] Info: [libukboot] <boot.c @  202> Unikraft constructor table at 0x113000 - 0x113010
-[    0.000000] Warn: [libukboot] <boot.c @  207> Call constructor: 0x1082b0())...
-[    0.000000] Warn: [libukboot] <boot.c @  207> Call constructor: 0x108a20())...
-[    0.000000] Info: [libukboot] <boot.c @  225> Initialize memory allocator...
+[    0.000000] Info: [libukboot] <boot.c @  199> Unikraft constructor table at 0x112000 - 0x112010
+[    0.000000] dbg:  [libukboot] <boot.c @  204> Call constructor: 0x1082f0())...
+[    0.000000] dbg:  [libukbus] <bus.c @   54> Register bus handler: 0x117000
+[    0.000000] dbg:  [libukboot] <boot.c @  204> Call constructor: 0x108a80())...
+[    0.000000] dbg:  [libukbus] <bus.c @   54> Register bus handler: 0x117060
+[    0.000000] Info: [libukboot] <boot.c @  222> Initialize memory allocator...
+[    0.000000] dbg:  [libukboot] <boot.c @  231> Try memory region: 0x140000 - 0x7fd0000 (flags: 0x31)...
 [    0.000000] Info: [libukallocbbuddy] <bbuddy.c @  491> Initialize binary buddy allocator 140000
-[    0.000000] Info: [libukboot] <boot.c @  268> Initialize IRQ subsystem...
-[    0.000000] Info: [libukboot] <boot.c @  275> Initialize platform time...
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 143000 - 144000 (order 0)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 144000 - 148000 (order 2)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 148000 - 150000 (order 3)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 150000 - 160000 (order 4)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 160000 - 180000 (order 5)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 180000 - 200000 (order 7)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 200000 - 400000 (order 9)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 400000 - 800000 (order 10)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 800000 - 1000000 (order 11)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 1000000 - 2000000 (order 12)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 2000000 - 4000000 (order 13)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 4000000 - 6000000 (order 13)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 6000000 - 7000000 (order 12)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 7000000 - 7800000 (order 11)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 7800000 - 7c00000 (order 10)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 7c00000 - 7e00000 (order 9)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 7e00000 - 7f00000 (order 8)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 7f00000 - 7f80000 (order 7)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 7f80000 - 7fc0000 (order 6)
+[    0.000000] dbg:  [libukallocbbuddy] <bbuddy.c @  447> 140000: Add allocate unit 7fc0000 - 7fd0000 (order 4)
+[    0.000000] Info: [libukboot] <boot.c @  265> Initialize IRQ subsystem...
+[    0.000000] Info: [libukboot] <boot.c @  272> Initialize platform time...
 [    0.000000] Info: [libkvmplat] <tscclock.c @  253> Calibrating TSC clock against i8254 timer
-[    0.100061] Info: [libkvmplat] <tscclock.c @  274> Clock source: TSC, frequency estimate is 3113081910 Hz
-[    0.101248] Info: [libukboot] <boot.c @   93> Init Table @ 0x113010 - 0x113018
-[    0.102075] Info: [libukbus] <bus.c @  136> Initialize bus handlers...
-[    0.103270] Info: [libukbus] <bus.c @  138> Probe buses...
-[    0.104907] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:00.00 (0600 8086:1237): <no driver>
-[    0.106652] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:01.00 (0600 8086:7000): <no driver>
-[    0.108106] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:02.00 (0300 1234:1111): <no driver>
-[    0.109337] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:03.00 (0200 8086:100e): <no driver>
+[    0.100032] Info: [libkvmplat] <tscclock.c @  274> Clock source: TSC, frequency estimate is 3112027770 Hz
+[    0.101047] Info: [libukboot] <boot.c @   90> Init Table @ 0x112010 - 0x112018
+[    0.102102] dbg:  [libukboot] <boot.c @   95> Call init function: 0x1110a0()...
+[    0.103365] Info: [libukbus] <bus.c @  136> Initialize bus handlers...
+[    0.104122] dbg:  [libukbus] <bus.c @   78> Initialize bus handler 0x117000...
+[    0.105153] dbg:  [libukbus] <bus.c @   78> Initialize bus handler 0x117060...
+[    0.105779] Info: [libukbus] <bus.c @  138> Probe buses...
+[    0.106737] dbg:  [libukbus] <bus.c @   90> Probe bus 0x117000...
+[    0.107478] dbg:  [libkvmpci] <pci_bus.c @  339> Probe PCI
+[    0.108196] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:00.00 (0600 8086:1237): <no driver>
+[    0.108983] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:01.00 (0600 8086:7000): <no driver>
+[    0.110052] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:02.00 (0300 1234:1111): <no driver>
+[    0.110643] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:03.00 (0200 8086:100e): <no driver>
+[    0.111645] dbg:  [libukbus] <bus.c @   90> Probe bus 0x117060...
 Powered by
 o.   .o       _ _               __ _
 Oo   Oo  ___ (_) | __ __  __ _ ' _) :_
@@ -36,13 +64,13 @@ oO   oO ' _ `| | |/ /  _)' _` | |_|  _)
 oOo oOO| | | | |   (| | | (_) |  _) :_
  OoOoO ._, ._:_:_,\_._,  .__,_:_, \___)
             Tethys 0.5.0~b8be82b-custom
-[    0.115208] Info: [libukboot] <boot.c @  120> Pre-init table at 0x117080 - 0x117080
-[    0.119628] Info: [libukboot] <boot.c @  131> Constructor table at 0x117080 - 0x117080
-[    0.121724] Info: [libukboot] <boot.c @  142> Calling main(1, ['build/helloworld_kvm-x86_64'])
+[    0.114346] Info: [libukboot] <boot.c @  117> Pre-init table at 0x1161d0 - 0x1161d0
+[    0.115178] Info: [libukboot] <boot.c @  128> Constructor table at 0x1161d0 - 0x1161d0
+[    0.116964] Info: [libukboot] <boot.c @  139> Calling main(1, ['build/helloworld_kvm-x86_64'])
 Hello world!
 Arguments:  "build/helloworld_kvm-x86_64"
-[    0.125712] Info: [libukboot] <boot.c @  151> main returned 0, halting system
-[    0.126816] Info: [libkvmplat] <shutdown.c @   35> Unikraft halted
+[    0.119050] Info: [libukboot] <boot.c @  148> main returned 0, halting system
+[    0.120498] Info: [libkvmplat] <shutdown.c @   35> Unikraft halted
 ```
 
 ## 分析
@@ -206,6 +234,10 @@ int kern_args = 0;
 int rc __maybe_unused = 0;
 ```
 
+但 `kern_args` 从未赋值，必然是 0。
+
+---
+
 然后，如果 `ukalloc`（分配器接口）存在的话，初始化一个变量保存分配器链表：
 
 ```c
@@ -213,6 +245,8 @@ int rc __maybe_unused = 0;
 struct uk_alloc *a = NULL;
 #endif
 ```
+
+---
 
 `CONFIG_LIBUKBOOT_NOALLOC` 是 `ukboot` 库的一个选项，应该是 `ukboot` 自己用什么分配器。除非 `ukboot` 不使用分配器，否则声明一个 `ukplat_memregion_desc` 结构体：
 
@@ -222,6 +256,8 @@ struct ukplat_memregion_desc md;
 #endif
 ```
 
+---
+
 如果有调度器，定义调度器和主线程指针（和分配器一样，调度器是一个侵入式单链表）：
 
 ```c
@@ -230,6 +266,8 @@ struct uk_sched *s = NULL;
 struct uk_thread *main_thread = NULL;
 #endif
 ```
+
+---
 
 `uksp` 是一个库，自述为“栈保护器”（uksp: Stack protector），不知道具体是干什么用的：
 
@@ -241,6 +279,8 @@ struct uk_thread *main_thread = NULL;
 UKSP_INIT_CANARY();
 #endif
 ```
+
+---
 
 然后是一段不受编译选项控制的代码：
 
@@ -255,7 +295,7 @@ uk_ctortab_foreach(ctorfn, uk_ctortab_start, uk_ctortab_end) {
 }
 ```
 
-这是 unikraft 定义的一种模块间通信的方式，即每个模块指定自己的一部分链接到某个段上，然后调用者直接去找那个段。因为操作系统需要定制链接脚本，所以可以这么弄。这里是经典的控制反转+依赖注入，需要动态初始化的模块直接把自己的构造器链接到一个 `.uk_ctortab` 段上，然后由 `ukboot` 依次调用。修改迭代中的日志级别之后，helloworld 会打印出：
+这是 unikraft 定义的一种模块间交互的方式，即每个模块指定自己的一部分链接到某个段上，然后调用者直接去找那个段，相当于一个链接时动态表。因为操作系统需要定制链接脚本，所以可以这么弄。这里是经典的控制反转+依赖注入，需要动态初始化的模块直接把自己的构造器链接到一个 `.uk_ctortab` 段上，然后由 `ukboot` 依次调用。修改迭代中的日志级别之后，helloworld 会打印出：
 
 ```bash
 [    0.000000] Info: [libukboot] <boot.c @  202> Unikraft constructor table at 0x113000 - 0x113010
@@ -264,3 +304,248 @@ uk_ctortab_foreach(ctorfn, uk_ctortab_start, uk_ctortab_end) {
 ```
 
 调用了 2 个注入的构造器，但不知道是什么。
+
+---
+
+```c
+#ifdef CONFIG_LIBUKLIBPARAM
+rc = (argc > 1) ? uk_libparam_parse(argv[0], argc - 1, &argv[1]) : 0;
+if (unlikely(rc < 0))
+    uk_pr_crit("Failed to parse the kernel argument\n");
+else {
+    kern_args = rc;
+    uk_pr_info("Found %d library args\n", kern_args);
+}
+#endif /* CONFIG_LIBUKLIBPARAM */
+```
+
+这一段判断有没有加载 `uklibparam` 库。这个库自述“库参数”（uklibparam: Library arguments），大概是用于给用户程序传参？没用到可以跳过。
+
+---
+
+下一段是嵌套的条件编译，为了更好看懂，缩进调整过。整段基于 `CONFIG_LIBUKBOOT_NOALLOC` 标记，声明变量时遇到过，大概是 ukboot 用不用动态内存分配，需要时编译这段代码：
+
+```c
+#if !CONFIG_LIBUKBOOT_NOALLOC
+/* initialize memory allocator
+ * FIXME: allocators are hard-coded for now
+ */
+uk_pr_info("Initialize memory allocator...\n");
+ukplat_memregion_foreach(&md, UKPLAT_MEMRF_ALLOCATABLE) {
+
+    #if CONFIG_UKPLAT_MEMRNAME
+    uk_pr_debug("Try memory region: %p - %p (flags: 0x%02x, name: %s)...\n",
+        md.base,
+        (void *)((size_t)md.base + md.len),
+        md.flags,
+        md.name
+    );
+    #else
+    uk_pr_debug("Try memory region: %p - %p (flags: 0x%02x)...\n",
+        md.base,
+        (void *)((size_t)md.base + md.len),
+        md.flags
+    );
+    #endif
+
+    /* try to use memory region to initialize allocator
+     * if it fails, we will try again with the next region.
+     * As soon we have an allocator, we simply add every
+     * subsequent region to it
+     */
+    if (!a) {
+        #if CONFIG_LIBUKBOOT_INITBBUDDY
+        a = uk_allocbbuddy_init(md.base, md.len);
+        #elif CONFIG_LIBUKBOOT_INITREGION
+        a = uk_allocregion_init(md.base, md.len);
+        #elif CONFIG_LIBUKBOOT_INITTLSF
+        a = uk_tlsf_init(md.base, md.len);
+        #endif
+    } else {
+        uk_alloc_addmem(a, md.base, md.len);
+    }
+}
+if (unlikely(!a))
+    uk_pr_warn("No suitable memory region for memory allocator. Continue without heap\n");
+else {
+    rc = ukplat_memallocator_set(a);
+    if (unlikely(rc != 0))
+        UK_CRASH("Could not set the platform memory allocator\n");
+}
+#endif
+```
+
+对于 helloworld，这段代码产生这个日志（后面还有一堆伙伴分配器插入产生的日志）：
+
+```bash
+[    0.000000] Info: [libukboot] <boot.c @  225> Initialize memory allocator...
+[    0.000000] dbg:  [libukboot] <boot.c @  234> Try memory region: 0x140000 - 0x7fd0000 (flags: 0x31)...
+[    0.000000] Info: [libukallocbbuddy] <bbuddy.c @  491> Initialize binary buddy allocator 140000
+```
+
+就是找到了 `0x140000 - 0x7fd0000` 这个可用地址段，然后把整个地址段插入伙伴分配器了。
+
+---
+
+```c
+#if CONFIG_LIBUKALLOC
+uk_pr_info("Initialize IRQ subsystem...\n");
+rc = ukplat_irq_init(a);
+if (unlikely(rc != 0))
+    UK_CRASH("Could not initialize the platform IRQ subsystem\n");
+#endif
+```
+
+`ukplat_irq_init` 函数是 plat 导出的，kvm 下的定义是：
+
+```c
+int ukplat_irq_init(struct uk_alloc *a)
+{
+    UK_ASSERT(allocator == NULL);
+    allocator = a;
+    return 0;
+}
+```
+
+由于它依赖动态内存分配，所以在 `ukalloc` 存在时才配置。
+
+---
+
+初始化平台时间操作不受编译选项控制。
+
+```c
+/* On most platforms the timer depend on an initialized IRQ subsystem */
+uk_pr_info("Initialize platform time...\n");
+ukplat_time_init();
+```
+
+`ukplat_time_init` 函数的定义也是平台相关的，kvm/x86 的定义是：
+
+```c
+/*must be called before interrupts are enabled*/
+void ukplat_time_init(void)
+{
+    int rc;
+
+    rc = ukplat_irq_register(0, timer_handler, NULL);
+    if (rc < 0)
+        UK_CRASH("Failed to register timer interrupt handler\n");
+
+    rc = tscclock_init();
+    if (rc < 0)
+        UK_CRASH("Failed to initialize TSCCLOCK\n");
+}
+```
+
+---
+
+如果调度器存在，初始化调度器：
+
+```c
+#if CONFIG_LIBUKSCHED
+/* Init scheduler. */
+s = uk_sched_default_init(a);
+if (unlikely(!s))
+    UK_CRASH("Could not initialize the scheduler\n");
+#endif
+```
+
+---
+
+启动参数将传递给主线程，但 `kern_args` 实际上是常数 0：
+
+```c
+tma.argc = argc - kern_args;
+tma.argv = &argv[kern_args];
+```
+
+---
+
+最后一步，如果有调度器，就让调度器加载主线程，并启动调度器；否则直接启动主线程。直接启动主线程时开了中断，可以推断出有调度器时中断应该是托管给调度器控制了：
+
+```c
+#if CONFIG_LIBUKSCHED
+main_thread = uk_thread_create("main", main_thread_func, &tma);
+if (unlikely(!main_thread))
+    UK_CRASH("Could not create main thread\n");
+uk_sched_start(s);
+#else
+/* Enable interrupts before starting the application */
+ukplat_lcpu_enable_irq();
+main_thread_func(&tma);
+#endif
+```
+
+---
+
+主线程的定义（有一些语法修改）：
+
+```c
+static void main_thread_func(struct thread_main_arg *tma)
+{
+    int i;
+    int ret;
+    uk_ctor_func_t *ctorfn;
+    uk_init_func_t *initfn;
+
+    /**
+     * Run init table
+     */
+    uk_pr_info("Init Table @ %p - %p\n", &uk_inittab_start[0], &uk_inittab_end);
+    uk_inittab_foreach(initfn, uk_inittab_start, uk_inittab_end) {
+        UK_ASSERT(*initfn);
+        uk_pr_debug("Call init function: %p()...\n", *initfn);
+        ret = (*initfn)();
+        if (ret < 0) {
+            uk_pr_err("Init function at %p returned error %d\n", *initfn, ret);
+            ret = UKPLAT_CRASH;
+            goto exit;
+        }
+    }
+
+    print_banner(stdout);
+    fflush(stdout);
+
+    /*
+     * Application
+     *
+     * We are calling the application constructors right before calling
+     * the application's main(). All of our Unikraft systems, VFS,
+     * networking stack is initialized at this point. This way we closely
+     * mimic what a regular user application (e.g., BSD, Linux) would expect
+     * from its OS being initialized.
+     */
+    uk_pr_info("Pre-init table at %p - %p\n", &__preinit_array_start[0], &__preinit_array_end);
+    uk_ctortab_foreach(ctorfn, __preinit_array_start, __preinit_array_end) {
+        if (!*ctorfn)
+        continue;
+
+        uk_pr_debug("Call pre-init constructor: %p()...\n", *ctorfn);
+        (*ctorfn)();
+    }
+
+    uk_pr_info("Constructor table at %p - %p\n", &__init_array_start[0], &__init_array_end);
+    uk_ctortab_foreach(ctorfn, __init_array_start, __init_array_end) {
+        if (!*ctorfn)
+        continue;
+
+        uk_pr_debug("Call constructor: %p()...\n", *ctorfn);
+        (*ctorfn)();
+    }
+
+    uk_pr_info("Calling main(%d, [", tma->argc);
+    for (i = 0; i < tma->argc; ++i) {
+        uk_pr_info("'%s'", tma->argv[i]);
+        if ((i + 1) < tma->argc)
+            uk_pr_info(", ");
+    }
+    uk_pr_info("])\n");
+
+    ret = main(tma->argc, tma->argv);
+    uk_pr_info("main returned %d, halting system\n", ret);
+    ret = (ret != 0) ? UKPLAT_CRASH : UKPLAT_HALT;
+
+exit:
+    ukplat_terminate(ret); /* does not return */
+}
+```
