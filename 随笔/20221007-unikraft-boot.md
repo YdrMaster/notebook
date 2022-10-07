@@ -4,7 +4,7 @@
 
 用 `kraft menuconfig`，可以配置 library-configuration/ukdebug/kernel-message-level，把日志级别配置成全部显示，以观察启动流程。
 
-qemu 上运行效果大致为（格式和内容经过微调）：
+qemu 上运行一个改过一些日志级别的 helloworld 效果大致为（格式经过微调）：
 
 ```bash
 Booting from ROM..
@@ -13,30 +13,36 @@ Booting from ROM..
 [    0.000000] Info: [libkvmplat] <setup.c @  282>     heap start: 0x140000
 [    0.000000] Info: [libkvmplat] <setup.c @  287>      stack top: 0x7fd0000
 [    0.000000] Info: [libkvmplat] <setup.c @  301> Switch from bootstrap stack to stack @0x7fe0000
-[    0.000000] Info: [libukboot] <boot.c @  200> Unikraft constructor table at 0x112000 - 0x112010
-[    0.000000] Info: [libukboot] <boot.c @  222> Initialize memory allocator...
+[    0.000000] Info: [libukboot] <boot.c @  202> Unikraft constructor table at 0x113000 - 0x113010
+[    0.000000] Warn: [libukboot] <boot.c @  207> Call constructor: 0x1082b0())...
+[    0.000000] Warn: [libukboot] <boot.c @  207> Call constructor: 0x108a20())...
+[    0.000000] Info: [libukboot] <boot.c @  225> Initialize memory allocator...
 [    0.000000] Info: [libukallocbbuddy] <bbuddy.c @  491> Initialize binary buddy allocator 140000
-[    0.000000] Info: [libukboot] <boot.c @  261> Initialize IRQ subsystem...
-[    0.000000] Info: [libukboot] <boot.c @  268> Initialize platform time...
+[    0.000000] Info: [libukboot] <boot.c @  268> Initialize IRQ subsystem...
+[    0.000000] Info: [libukboot] <boot.c @  275> Initialize platform time...
 [    0.000000] Info: [libkvmplat] <tscclock.c @  253> Calibrating TSC clock against i8254 timer
-[    0.100029] Info: [libkvmplat] <tscclock.c @  274> Clock source: TSC, frequency estimate is 3111939350 Hz
-[    0.100422] Info: [libukboot] <boot.c @   93> Init Table @ 0x112010 - 0x112018
-[    0.100796] Info: [libukbus] <bus.c @  136> Initialize bus handlers...
-[    0.101338] Info: [libukbus] <bus.c @  138> Probe buses...
-[    0.101567] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:00.00 (0600 8086:1237): <no driver>
-[    0.102216] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:01.00 (0600 8086:7000): <no driver>
-[    0.103002] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:02.00 (0300 1234:1111): <no driver>
-[    0.103876] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:03.00 (0200 8086:100e): <no driver>
+[    0.100061] Info: [libkvmplat] <tscclock.c @  274> Clock source: TSC, frequency estimate is 3113081910 Hz
+[    0.101248] Info: [libukboot] <boot.c @   93> Init Table @ 0x113010 - 0x113018
+[    0.102075] Info: [libukbus] <bus.c @  136> Initialize bus handlers...
+[    0.103270] Info: [libukbus] <bus.c @  138> Probe buses...
+[    0.104907] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:00.00 (0600 8086:1237): <no driver>
+[    0.106652] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:01.00 (0600 8086:7000): <no driver>
+[    0.108106] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:02.00 (0300 1234:1111): <no driver>
+[    0.109337] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:03.00 (0200 8086:100e): <no driver>
 Powered by
 o.   .o       _ _               __ _
 Oo   Oo  ___ (_) | __ __  __ _ ' _) :_
 oO   oO ' _ `| | |/ /  _)' _` | |_|  _)
 oOo oOO| | | | |   (| | | (_) |  _) :_
  OoOoO ._, ._:_:_,\_._,  .__,_:_, \___)
-                   Tethys 0.5.0~b8be82b
-[    0.108184] Info: [libukboot] <boot.c @  119> Pre-init table at 0x115f70 - 0x115f70
-[    0.108985] Info: [libukboot] <boot.c @  130> Constructor table at 0x115f70 - 0x115f70
-[    0.110428] Info: [libukboot] <boot.c @  140> Calling main...
+            Tethys 0.5.0~b8be82b-custom
+[    0.115208] Info: [libukboot] <boot.c @  120> Pre-init table at 0x117080 - 0x117080
+[    0.119628] Info: [libukboot] <boot.c @  131> Constructor table at 0x117080 - 0x117080
+[    0.121724] Info: [libukboot] <boot.c @  142> Calling main(1, ['build/helloworld_kvm-x86_64'])
+Hello world!
+Arguments:  "build/helloworld_kvm-x86_64"
+[    0.125712] Info: [libukboot] <boot.c @  151> main returned 0, halting system
+[    0.126816] Info: [libkvmplat] <shutdown.c @   35> Unikraft halted
 ```
 
 ## 分析
@@ -215,3 +221,46 @@ struct uk_alloc *a = NULL;
 struct ukplat_memregion_desc md;
 #endif
 ```
+
+如果有调度器，定义调度器和主线程指针（和分配器一样，调度器是一个侵入式单链表）：
+
+```c
+#if CONFIG_LIBUKSCHED
+struct uk_sched *s = NULL;
+struct uk_thread *main_thread = NULL;
+#endif
+```
+
+`uksp` 是一个库，自述为“栈保护器”（uksp: Stack protector），不知道具体是干什么用的：
+
+```c
+/* We use a macro because if we were to use a function we
+ * would not be able to return from the function if we have
+ * changed the stack protector inside the function */
+#if CONFIG_LIBUKSP
+UKSP_INIT_CANARY();
+#endif
+```
+
+然后是一段不受编译选项控制的代码：
+
+```c
+uk_ctor_func_t *ctorfn;
+
+uk_pr_info("Unikraft constructor table at %p - %p\n", &uk_ctortab_start[0], &uk_ctortab_end);
+uk_ctortab_foreach(ctorfn, uk_ctortab_start, uk_ctortab_end) {
+    UK_ASSERT(*ctorfn);
+    uk_pr_debug("Call constructor: %p())...\n", *ctorfn);
+    (*ctorfn)();
+}
+```
+
+这是 unikraft 定义的一种模块间通信的方式，即每个模块指定自己的一部分链接到某个段上，然后调用者直接去找那个段。因为操作系统需要定制链接脚本，所以可以这么弄。这里是经典的控制反转+依赖注入，需要动态初始化的模块直接把自己的构造器链接到一个 `.uk_ctortab` 段上，然后由 `ukboot` 依次调用。修改迭代中的日志级别之后，helloworld 会打印出：
+
+```bash
+[    0.000000] Info: [libukboot] <boot.c @  202> Unikraft constructor table at 0x113000 - 0x113010
+[    0.000000] Warn: [libukboot] <boot.c @  207> Call constructor: 0x1082b0())...
+[    0.000000] Warn: [libukboot] <boot.c @  207> Call constructor: 0x108a20())...
+```
+
+调用了 2 个注入的构造器，但不知道是什么。
