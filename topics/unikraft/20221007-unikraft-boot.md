@@ -92,14 +92,14 @@ void _libkvmplat_entry(void *arg)
     uk_pr_info("Entering from KVM (x86)...\n");
 ```
 
-x86 的汇编不怎么能看懂，不过 `_libkvmplat_entry` 基本上就是第一次进 c 的位置了，前面大概也没那么重要，可以不管。接下来：
+x86 的汇编不怎么能看懂，不过 `_libkvmplat_entry` 基本上就是第一次进 C 的位置了，前面大概也没那么重要，可以不管。接下来：
 
-1. `_init_cpufeatures`：保存 tp 指针，填写一个 `_x86_features` 结构体，大概是 cpu 功能探测之类的；
+1. `_init_cpufeatures`：填写一个 `_x86_features` 结构体，大概是 cpu 功能探测之类的；
 2. `_libkvmplat_init_console`：初始化 console；
 3. `traps_init`：初始化陷入处理；
 4. `intctrl_init`：里面调了一个 PIC_remap，PIC=`Programmable Interrupt Controller` 可编程中断控制器；
 
-这 4 个函数都是 `plat/kvm/x86` 内部定义的，不管函数名带不带下划线。plat 库似乎没有函数导出表，不那么好查。
+这 4 个函数都是 `plat/kvm/x86` 内部定义的，不管函数名带不带下划线。plat 库的函数导出可以查看 `unikraft/include/uk/plat` 目录。
 
 接下来的这一段和 x86_64 引导的 multiboot 规范有关，以及打印了一些日志，不用仔细看：
 
@@ -107,9 +107,9 @@ x86 的汇编不怎么能看懂，不过 `_libkvmplat_entry` 基本上就是第�
 uk_pr_info("     multiboot: %p\n", mi);
 
 /*
-* The multiboot structures may be anywhere in memory, so take a copy of
-* everything necessary before we initialise memory allocation.
-*/
+ * The multiboot structures may be anywhere in memory, so take a copy of
+ * everything necessary before we initialise memory allocation.
+ */
 _mb_get_cmdline(mi);
 _mb_init_mem(mi);
 _mb_init_initrd(mi);
@@ -140,11 +140,14 @@ uk_pr_info("Switch from bootstrap stack to stack @%p\n", (void *) _libkvmplat_cf
 _libkvmplat_newstack(_libkvmplat_cfg.bstack.end, _libkvmplat_entry2, 0);
 ```
 
-`CONFIG_HAVE_SYSCALL` 应该是为 x86 支持的平行发送的系统调用做准备。`CONFIG_HAVE_X86PKU` 不知道是干什么用的，可能是 x86 上的某种功能，不管它。`_libkvmplat_newstack` 是一个汇编程序，大约是在一个新的栈上执行函数的意思，总之，它调用了 `_libkvmplat_entry2`：
+`CONFIG_HAVE_SYSCALL` 应该是为 x86 支持的平行发送的系统调用做准备。`_init_syscall()` 的源码上有一个版权声明，提到这个函数来自 [hermitux](https://ssrg-vt.github.io/hermitux/)，另一个 x86 幺内核。
+
+`CONFIG_HAVE_X86PKU` 不知道是干什么用的，大概是 x86 上的某种硬件功能。
+
+`_libkvmplat_newstack` 是一个汇编程序，大约是在一个新的栈上执行函数的意思，总之，它调用了 `_libkvmplat_entry2`：
 
 ```c
-static void _libkvmplat_entry2(void *arg __attribute__((unused)))
-{
+static void _libkvmplat_entry2(void *arg __attribute__((unused))) {
     ukplat_entry_argp(NULL, cmdline, sizeof(cmdline));
 }
 ```
@@ -175,15 +178,14 @@ void ukplat_entry_argp(char *arg0, char *argb, __sz argb_len) __noreturn;
 >
 > @param argb_len 参数缓冲区的长度（当 `argb` 应该被处理为零结尾时，设置为 `__SZ_MAX`）。
 
-这里实际调用的是静态链接进来的 ukboot 提供的实现，根据论文描述，ukboot 是一个默认的启动流程，可以由接口相同的另一个库替换掉。
+这里实际调用的是静态链接进来的 ukboot 提供的实现，根据[论文描述](/tranlation/20220923-unikraft.md#3-Unikraft-架构和-API)，ukboot 是一个默认的启动流程，可以由接口相同的另一个库替换掉。
 
 ### ukboot
 
 在 `unikraft/lib/ukboot/boot.c`：
 
 ```c
-void ukplat_entry_argp(char *arg0, char *argb, __sz argb_len)
-{
+void ukplat_entry_argp(char *arg0, char *argb, __sz argb_len) {
     static char *argv[CONFIG_LIBUKBOOT_MAXNBARGS];
     int argc = 0;
 
@@ -203,7 +205,7 @@ void ukplat_entry_argp(char *arg0, char *argb, __sz argb_len)
 }
 ```
 
-构造了 `argc` 和 `argv` 之后调用 `ukplat_entry`。这个函数的声明和定义都是挨着 `ukplat_entry_argp` 的，声明：
+`CONFIG_LIBUKBOOT_MAXNBARGS` 是 `ukboot` 的一个可配置的项，在 menuconfig 里可以修改，默认值是 60。这个函数计算 `argc` 并把参数都填进 `argv`，然后调用 `ukplat_entry`。`ukplat_entry` 的声明和定义都是挨着 `ukplat_entry_argp` 的，声明：
 
 ```c
 /**
@@ -234,7 +236,7 @@ int kern_args = 0;
 int rc __maybe_unused = 0;
 ```
 
-但 `kern_args` 从未赋值，必然是 0。
+在这声明是为了照顾传统 C 写法，`tma` 在最后才会用到；`rc` 实际上是一个存错误码的局部变量，相当于 `errno`。
 
 ---
 
@@ -246,9 +248,11 @@ struct uk_alloc *a = NULL;
 #endif
 ```
 
+`uk_alloc` 既要描述分配器结构同时还是一个侵入式单链表，在 `unikraft/lib/ukalloc/include/uk/alloc.h:79`。
+
 ---
 
-`CONFIG_LIBUKBOOT_NOALLOC` 是 `ukboot` 库的一个选项，应该是 `ukboot` 自己用什么分配器。除非 `ukboot` 不使用分配器，否则声明一个 `ukplat_memregion_desc` 结构体：
+`CONFIG_LIBUKBOOT_NOALLOC` 是 `ukboot` 库的一个选项，可能是 `ukboot` 自己用什么分配器。除非 `ukboot` 不使用分配器，否则声明一个 `ukplat_memregion_desc` 结构体：
 
 ```c
 #if !CONFIG_LIBUKBOOT_NOALLOC
@@ -295,7 +299,7 @@ uk_ctortab_foreach(ctorfn, uk_ctortab_start, uk_ctortab_end) {
 }
 ```
 
-这是 unikraft 定义的一种模块间交互的方式，即每个模块指定自己的一部分链接到某个段上，然后调用者直接去找那个段，相当于一个链接时动态表。因为操作系统需要定制链接脚本，所以可以这么弄。这里是经典的控制反转+依赖注入，需要动态初始化的模块直接把自己的构造器链接到一个 `.uk_ctortab` 段上，然后由 `ukboot` 依次调用。修改迭代中的日志级别之后，helloworld 会打印出：
+这是 unikraft 定义的一种模块间交互的方式，即每个模块指定自己的一部分链接到某个段上，然后调用者直接去找那个段，相当于一个链接时动态表。因为操作系统需要定制链接脚本，所以可以这么弄。这里的用法是是经典的控制反转+依赖注入，需要动态初始化的模块直接把自己的构造器链接到一个 `.uk_ctortab` 段上，然后由 `ukboot` 依次调用。修改迭代中的日志级别之后，helloworld 会打印出：
 
 ```bash
 [    0.000000] Info: [libukboot] <boot.c @  202> Unikraft constructor table at 0x113000 - 0x113010
@@ -303,7 +307,58 @@ uk_ctortab_foreach(ctorfn, uk_ctortab_start, uk_ctortab_end) {
 [    0.000000] Warn: [libukboot] <boot.c @  207> Call constructor: 0x108a20())...
 ```
 
-调用了 2 个注入的构造器，但不知道是什么。
+调用了 2 个注入的构造器，但这个没设计名字，不容易知道是谁注入的。构造静态链接的方法见[文档翻译](20221008-add-section.md)。ctor 这一组宏的定义在 `unikraft/include/uk/ctors.h`，类似文档的描述（格式经过调整）：
+
+```c
+extern const uk_ctor_func_t uk_ctortab_start[];
+extern const uk_ctor_func_t uk_ctortab_end;
+
+/**
+ * Register a Unikraft constructor function that is called during bootstrap (uk_ctortab)
+ *
+ * @param fn
+ *   Constructor function to be called
+ * @param prio
+ *   Priority level (0 (earliest) to 9 (latest))
+ *   Use the UK_PRIO_AFTER() helper macro for computing priority dependencies.
+ *   Note: Any other value for level will be ignored
+ */
+#define __UK_CTORTAB(fn, prio)            \
+    static const uk_ctor_func_t           \
+    __used __section(".uk_ctortab" #prio) \
+    __uk_ctortab ## prio ## _ ## fn = (fn)
+
+#define _UK_CTORTAB(fn, prio) __UK_CTORTAB(fn, prio)
+
+#define UK_CTOR_PRIO(fn, prio) _UK_CTORTAB(fn, prio)
+
+/**
+ * Similar interface without priority.
+ */
+#define UK_CTOR(fn) UK_CTOR_PRIO(fn, UK_PRIO_LATEST)
+
+/* DELETEME: Compatibility wrapper for existing code, to be removed! */
+#define UK_CTOR_FUNC(lvl, ctorf) _UK_CTORTAB(ctorf, lvl)
+
+/**
+ * Helper macro for iterating over constructor pointer tables
+ * Please note that the table may contain NULL pointer entries
+ *
+ * @param itr
+ *   Iterator variable (uk_ctor_func_t *) which points to the individual
+ *   table entries during iteration
+ * @param ctortab_start
+ *   Start address of table (type: const uk_ctor_func_t[])
+ * @param ctortab_end
+ *   End address of table (type: const uk_ctor_func_t)
+ */
+#define uk_ctortab_foreach(itr, ctortab_start, ctortab_end) \
+    for ((itr) = DECONST(uk_ctor_func_t*, ctortab_start);   \
+         (itr) < &(ctortab_end);                            \
+         (itr)++)
+```
+
+注册和迭代的宏都和文档描述基本一致，只是加了几个不同的包装。
 
 ---
 
