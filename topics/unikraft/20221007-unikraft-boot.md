@@ -702,3 +702,61 @@ exit:
     ukplat_terminate(ret); /* does not return */
 }
 ```
+
+`inittab`，经典的链接时动态表，位于 `unikraft/include/uk/init.h`（只拷贝了关键部分，中间一堆常量省略了）：
+
+```c
+/**
+ * Register a Unikraft init function that is called during bootstrap (uk_inittab)
+ *
+ * @param fn
+ *   Initialization function to be called
+ * @param class
+ *   Initialization class (1 (earliest) to 6 (latest))
+ * @param prio
+ *   Priority level (0 (earliest) to 9 (latest)), must be a constant.
+ *   Use the UK_PRIO_AFTER() helper macro for computing priority dependencies.
+ *   Note: Any other value for level will be ignored
+ */
+#define __UK_INITTAB(fn, base, prio)            \
+    static const uk_init_func_t                 \
+    __used __section(".uk_inittab" #base #prio) \
+    __uk_inittab ## base ## prio ## _ ## fn = (fn)
+
+extern const uk_init_func_t uk_inittab_start[];
+extern const uk_init_func_t uk_inittab_end;
+
+/**
+ * Helper macro for iterating over init pointer tables
+ * Please note that the table may contain NULL pointer entries
+ *
+ * @param itr
+ *   Iterator variable (uk_init_func_t *) which points to the individual table entries during iteration
+ * @param inittab_start
+ *   Start address of table (type: const uk_init_func_t[])
+ * @param inittab_end
+ *   End address of table (type: const uk_init_func_t)
+ */
+#define uk_inittab_foreach(itr, inittab_start, inittab_end) \
+    for ((itr) = DECONST(uk_init_func_t*, inittab_start);   \
+         (itr) < &(inittab_end);                            \
+         (itr)++)
+```
+
+比较前后的日志可以确认，这些初始化函数完成了 pci 总线的初始化：
+
+```bash
+[    0.101047] Info: [libukboot] <boot.c @   90> Init Table @ 0x112010 - 0x112018
+[    0.102102] dbg:  [libukboot] <boot.c @   95> Call init function: 0x1110a0()...
+[    0.103365] Info: [libukbus] <bus.c @  136> Initialize bus handlers...
+[    0.104122] dbg:  [libukbus] <bus.c @   78> Initialize bus handler 0x117000...
+[    0.105153] dbg:  [libukbus] <bus.c @   78> Initialize bus handler 0x117060...
+[    0.105779] Info: [libukbus] <bus.c @  138> Probe buses...
+[    0.106737] dbg:  [libukbus] <bus.c @   90> Probe bus 0x117000...
+[    0.107478] dbg:  [libkvmpci] <pci_bus.c @  339> Probe PCI
+[    0.108196] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:00.00 (0600 8086:1237): <no driver>
+[    0.108983] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:01.00 (0600 8086:7000): <no driver>
+[    0.110052] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:02.00 (0300 1234:1111): <no driver>
+[    0.110643] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:03.00 (0200 8086:100e): <no driver>
+[    0.111645] dbg:  [libukbus] <bus.c @   90> Probe bus 0x117060...
+```
