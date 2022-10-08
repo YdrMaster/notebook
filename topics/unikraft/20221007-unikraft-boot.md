@@ -760,3 +760,7 @@ extern const uk_init_func_t uk_inittab_end;
 [    0.110643] Info: [libkvmpci] <pci_bus.c @  284> PCI 00:03.00 (0200 8086:100e): <no driver>
 [    0.111645] dbg:  [libukbus] <bus.c @   90> Probe bus 0x117060...
 ```
+
+然后又是两组构造函数，但对于 hello_world，两组都是空的。
+
+最后是传参，调用应用程序的 main，关机。
