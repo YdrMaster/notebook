@@ -440,6 +440,96 @@ else {
 
 就是找到了 `0x140000 - 0x7fd0000` 这个可用地址段，然后把整个地址段插入伙伴分配器了。
 
+`ukplat_memregion_foreach` 宏来自 `unikraft/include/uk/plat/memory.h`（格式经过调整）：
+
+```c
+/* Descriptor of a memory region */
+struct ukplat_memregion_desc {
+    void *base;
+    __sz len;
+    int flags;
+#if CONFIG_UKPLAT_MEMRNAME
+    const char *name;
+#endif
+};
+
+/**
+ * Returns the number of available memory regions
+ * @return Number of memory regions
+ */
+int ukplat_memregion_count(void);
+
+/**
+ * Reads a memory region to mrd
+ * @param i Memory region number
+ * @param mrd Pointer to memory region descriptor that will be filled out
+ * @return 0 on success, < 0 otherwise
+ */
+int ukplat_memregion_get(int i, struct ukplat_memregion_desc *mrd);
+
+/**
+ * Searches for the next memory region after `i` that has at least `sflags`
+ * flags set.
+ * @param i Memory region number to start searching
+ *          To start searching from the beginning, set `i` to `-1`
+ * @param sflags Find only memory regions that have at least `sflags` flags set.
+ *               If no flags are given (`0x0`), any found region is returned
+ * @param mrd Pointer to memory region descriptor that will be filled out
+ * @return On success the function returns the next region number after `i`
+ *         that fulfills `sflags`. `mrd` is filled out with the memory region
+ *         details. A value < 0 is returned if no more region could be found
+ *         that fulfills the search criteria. `mrd` may be filled out with
+ *         undefined values.
+ */
+static inline int ukplat_memregion_find_next(int i, int sflags, struct ukplat_memregion_desc *mrd) {
+    int rc, count;
+
+    count = ukplat_memregion_count();
+
+    if (i >= count)
+        return -1;
+
+    do
+        rc = ukplat_memregion_get(++i, mrd);
+    while (i < count && (rc < 0 || ((mrd->flags & sflags) != sflags)));
+
+    if (i == count)
+        return -1;
+    return i;
+}
+
+/**
+ * Iterates over all memory regions that have at least `sflags` flags set.
+ * @param mrd Pointer to memory region descriptor that will be filled out during iteration
+ * @param sflags Iterate only over memory regions that have at least `sflags` flags set.
+ *               If no flags are given (`0x0`), every existing region is iterated.
+ */
+#define ukplat_memregion_foreach(mrd, sflags)                          \
+    for (int __ukplat_memregion_foreach_i =                            \
+        ukplat_memregion_find_next(-1, (sflags), (mrd));               \
+            __ukplat_memregion_foreach_i >= 0;                         \
+            __ukplat_memregion_foreach_i = ukplat_memregion_find_next( \
+                __ukplat_memregion_foreach_i,                          \
+                (sflags),                                              \
+                (mrd)                                                  \
+            )                                                          \
+        )
+
+/**
+ * Searches for the first initrd module
+ * @param mrd Pointer to memory region descriptor that will be filled out
+ * @return On success, returns the region number of the first initrd module,
+ *         `mrd` is filled out with the memory region details.
+ *         A return value < 0 means that there is no initrd module,
+ *         `mrd` may be filled out with undefined values.
+ */
+#define ukplat_memregion_find_initrd0(mrd) ukplat_memregion_find_next(-1, UKPLAT_MEMRF_INITRD, (mrd))
+```
+
+这段代码利用 `ukplat_memregion_count` 和 `ukplat_memregion_get` 两个函数形成抽象，要求平台库提供内存区域的数量和基于索引的访问，其实就是让平台库提供一个能随机访问的内存区域集合。现代语言对这个问题有更好的抽象。
+
+而具体平台提供内存区域的方式实际上是手写代码翻译链接脚本……（例如 `unikraft/plat/kvm/memory.c`）非常原始。现代语言应该能自动做这个事。
+
 ---
 
 ```c
@@ -462,7 +552,15 @@ int ukplat_irq_init(struct uk_alloc *a)
 }
 ```
 
-由于它依赖动态内存分配，所以在 `ukalloc` 存在时才配置。
+这是依赖注入。因为 kvm 的中断注册 `ukplat_irq_register` 需要依赖 allocator 动态分配，所以这里专门给 irq.c 文件注入了一个 allocator。
+
+> 到这其实几种建立模块关联的方式都见到了：
+>
+> 1. 符号静态链接
+> 2. 段静态链接
+> 3. 动态注入
+>
+> 对于 Rust 其实也无外乎这 3 种方式。只是 Rust 作为现代语言，支持 mangle 符号名。通过 Cargo.toml 声明的静态链接，在符号名 mangle 的情况下依然能链接，这支持不同模块依赖不同版本的同一模块，对于工程性大有裨益。参见这个[讨论](https://github.com/rust-lang/rust/issues/28179)。
 
 ---
 
@@ -507,7 +605,7 @@ if (unlikely(!s))
 
 ---
 
-启动参数将传递给主线程，但 `kern_args` 实际上是常数 0：
+启动参数将传递给主线程：
 
 ```c
 tma.argc = argc - kern_args;
