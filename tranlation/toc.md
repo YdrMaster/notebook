@@ -10,3 +10,4 @@
 - 20220919-[红叶：安全操作系统中的隔离和通信](/tranlation/20220919-red-leaf.md)
 - 20220920-[忒修斯 OS](/tranlation/20220920-theseus/toc.md)
 - 20220923-[Unikraft](/tranlation/20220923-unikraft.md)
+- 20221019-[200 行 Rust 解读 Futures](/tranlation/20221019-futures-in-200-lines/introduction.md)
