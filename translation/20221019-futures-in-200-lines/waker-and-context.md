@@ -220,3 +220,7 @@ fn main() {
 这就为运行时的实现者留下了很多选择。
 
 > This leaves a lot of options on the table for runtime implementors.
+
+---
+
+[下一章——生成器和 async/await](generators-and-async-await.md)
