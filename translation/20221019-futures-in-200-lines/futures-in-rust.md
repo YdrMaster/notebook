@@ -154,23 +154,23 @@ Rust 和其他语言的区别在于，你必须主动地选择运行时。在其
 > 2. Executor
 > 3. Future
 
-那么，这三个部分是如何协同工作的呢？他们通过一个叫做 `Waker` 的对象来实现。`Waker` 是反应器告诉执行器一个特定的 Future 已经准备好运行的方式。一旦你理解了 `Waker` 的生命周期和所有权，你就会能用户的角度理解 future 如何工作了。这是生命周期：
+那么，这三个部分是如何协同工作的呢？他们通过一个叫做 `Waker` 的对象来实现。Waker 是反应器告诉执行器一个特定的 Future 已经准备好运行的方式。一旦你理解了 Waker 的生命周期和所有权，你就会能用户的角度理解 future 如何工作了。这是生命周期：
 
 > So, how does these three parts work together? They do that through an object called the Waker. The Waker is how the reactor tells the executor that a specific Future is ready to run. Once you understand the life cycle and ownership of a Waker, you'll understand how futures work from a user's perspective. Here is the life cycle:
 
-- `Waker` 是由**执行器**创建的。一个常见的，但不是必须的方法是为每个在执行器那里注册的 future 创建一个新的 `Waker`。
-- 当一个 future 在执行器处注册时，它被赋予一个由执行器创建的 `Waker` 对象的克隆。由于这是一个共享对象（例如 `Arc<T>`），所有的克隆实际上都指向同一个基础对象。因此，任何调用原始 `Waker` 的克隆的东西都会唤醒注册在它身上的特定Future。
-- future 克隆了 `Waker` 并将其传递给反应器，反应器将其存储起来以便日后使用。
+- Waker 是由**执行器**创建的。一个常见的，但不是必须的方法是为每个在执行器那里注册的 future 创建一个新的 Waker。
+- 当一个 future 在执行器处注册时，它被赋予一个由执行器创建的 Waker 对象的克隆。由于这是一个共享对象（例如 `Arc<T>`），所有的克隆实际上都指向同一个基础对象。因此，任何调用原始 Waker 的克隆的东西都会唤醒注册在它身上的特定Future。
+- future 克隆了 Waker 并将其传递给反应器，反应器将其存储起来以便日后使用。
 
 > - A Waker is created by the executor. A common, but not required, method is to create a new Waker for each Future that is registered with the executor.
 > - When a future is registered with an executor, it’s given a clone of the Waker object created by the executor. Since this is a shared object (e.g. an `Arc<T>`), all clones actually point to the same underlying object. Thus, anything that calls any clone of the original Waker will wake the particular Future that was registered to it.
 > - The future clones the Waker and passes it to the reactor, which stores it to use later.
 
-在未来的某个时刻，反应器将决定 future 可以运行了。它将通过它所存储的 `Waker` 唤醒 future。这个动作将做一些必要的事情，以使执行器处于可以轮询 future 的位置。
+在未来的某个时刻，反应器将决定 future 可以运行了。它将通过它所存储的 Waker 唤醒 future。这个动作将做一些必要的事情，以使执行器处于可以轮询 future 的位置。
 
 > At some point in the future, the reactor will decide that the future is ready to run. It will wake the future via the Waker that it stored. This action will do what is necessary to get the executor in a position to poll the future.
 
-`Waker` 对象实现了我们与任务相关的一切。该对象是由正在使用的执行器的类型决定的，但是所有的 `Waker` 共享一个相同的接口（它不是一个 trait，因为嵌入式系统不能处理 trait object，但是一个有用的抽象是把它看成一个 trait object）。
+Waker 对象实现了我们与任务相关的一切。该对象是由正在使用的执行器的类型决定的，但是所有的 Waker 共享一个相同的接口（它不是一个 trait，因为嵌入式系统不能处理 trait object，但是一个有用的抽象是把它看成一个 trait object）。
 
 > The Waker object implements everything that we associate with task. The object is specific to the type of executor in use, but all Wakers share a similar interface (it's not a trait because embedded systems can't handle trait objects, but a useful abstraction is to think of it as a trait object).
 
@@ -199,7 +199,7 @@ Rust 和其他语言的区别在于，你必须主动地选择运行时。在其
 
 1. 一个通用的接口，通过 `Future` trait 表示一个将在未来完成的操作。
 2. 通过 `async` 和 `await` 关键字创建可以暂停和恢复的任务，这是一种符合人体工程学的方法。
-3. 通过 `Waker` 类型定义的接口来唤醒一个暂停的任务。
+3. 通过 Waker 类型定义的接口来唤醒一个暂停的任务。
 
 > 1. A common interface representing an operation which will be completed in the future through the Future trait.
 > 2. An ergonomic way of creating tasks which can be suspended and resumed through the async and await keywords.
@@ -279,3 +279,77 @@ let non_leaf = async {
 休息一下或喝杯咖啡，准备好在接下来的章节中进行深入研究。
 
 > Take a break or a cup of coffee and get ready as we go for a deep dive in the next chapters.
+
+## 想了解更多关于并发和异步的知识吗？
+
+> Want to learn more about concurrency and async?
+
+如果你觉得并发和异步编程的概念总体上令人困惑，我知道你的想法，我写了一些资源，试图给出一个概括性的概述，这将使你以后更容易学习 Rust 的 Futures：
+
+> If you find the concepts of concurrency and async programming confusing in general, I know where you're coming from and I have written some resources to try to give a high-level overview that will make it easier to learn Rust's Futures afterwards:
+
+- [异步基础知识 - 并发和并行的区别](https://cfsamson.github.io/book-exploring-async-basics/1_concurrent_vs_parallel.html)
+- [异步基础知识 - 异步的历史](https://cfsamson.github.io/book-exploring-async-basics/2_async_history.html)
+- [异步基础知识 - 处理I/O的策略](https://cfsamson.github.io/book-exploring-async-basics/5_strategies_for_handling_io.html)
+- [异步基础知识 - Epoll、Kqueue 和 IOCP](https://cfsamson.github.io/book-exploring-async-basics/6_epoll_kqueue_iocp.html)
+
+> - Async Basics - The difference between concurrency and parallelism
+> - Async Basics - Async history
+> - Async Basics - Strategies for handling I/O
+> - Async Basics - Epoll, Kqueue and IOCP
+
+没必要通过学习 futures 来学习这些概念，所以如果你觉得有点不确定，就继续阅读这些章节吧。
+
+> Learning these concepts by studying futures is making it much harder than it needs to be, so go on and read these chapters if you feel a bit unsure.
+
+我会等着你回到这里来。
+
+> I'll be right here when you're back.
+
+不过，如果你觉得你已经掌握了基本知识，那么我们就开始行动吧！
+
+> However, if you feel that you have the basics covered, then let's get moving!
+
+## 补充章节--关于 Futures 和 Wakers 的补充说明
+
+> Bonus section - additional notes on Futures and Wakers
+
+在这一节中，我们将深入研究异步运行时的执行器部分和反应器部分之间松耦合的一些优势。
+
+> In this section we take a deeper look at some advantages of having a loose coupling between the Executor-part and Reactor-part of an async runtime.
+
+本章的前面，我提到执行器通常为每个在执行器上注册的 Future 创建一个新的 Waker，但 Waker 是一个类似于 `Arc<T>` 的共享对象。这种设计的原因之一是，它允许不同的反应器都能唤醒 Future。
+
+> Earlier in this chapter, I mentioned that it is common for the executor to create a new Waker for each Future that is registered with the executor, but that the Waker is a shared object similar to a `Arc<T>`. One of the reasons for this design is that it allows different Reactors the ability to Wake a Future.
+
+用一个例子来介绍用法，考虑一下如何创建一个新类型的 Future，它能被取消：
+
+> As an example of how this can be used, consider how you could create a new type of Future that has the ability to be canceled:
+
+实现这一点的一个方法是在 Future 的实例中添加一个 [AtomicBool](https://doc.rust-lang.org/std/sync/atomic/struct.AtomicBool.html)，以及一个额外的名为 `cancel()` 的方法。`cancel()` 方法将首先设置 [AtomicBool](https://doc.rust-lang.org/std/sync/atomic/struct.AtomicBool.html)，以示 Future 已被取消，然后立即调用实例自己的 Waker 副本。
+
+> One way to achieve this would be to add an AtomicBool to the instance of the future, and an extra method called cancel(). The cancel() method will first set the AtomicBool to signal that the future is now canceled, and then immediately call instance's own copy of the Waker.
+
+一旦执行器开始执行 Future，Future 就会知道它被取消了，并且会做适当的清理动作来终止自己。
+
+> Once the executor starts executing the Future, the Future will know that it was canceled, and will do the appropriate cleanup actions to terminate itself.
+
+以这种方式设计 Future 的主要原因是我们不需要修改执行器或其他反应器；这种变化对它们来说不可见。
+
+> The main reason for designing the Future in this manner is because we don't have to modify either the Executor or the other Reactors; they are all oblivious to the change.
+
+唯一可能的问题是关于 Future 本身的设计；一个被取消的 Future 仍然需要根据 [Future](https://doc.rust-lang.org/std/future/trait.Future.html) 文档中列出的规则正确地终止。这意味着，它不能只是删除它的资源，然后坐在那里；它需要返回一个值。你可以决定一个被取消的 Future 是否会永远返回 [Pending](https://doc.rust-lang.org/std/task/enum.Poll.html#variant.Pending)，或者是否会在 [Ready](https://doc.rust-lang.org/std/task/enum.Poll.html#variant.Ready) 中返回一个值。请注意，如果其他 Future 正在等待它，它们将无法启动，直到返回 [Ready](https://doc.rust-lang.org/std/task/enum.Poll.html#variant.Ready)。
+
+> The only possible issue is with the design of the Future itself; a Future that is canceled still needs to terminate correctly according to the rules outlined in the docs for Future. That means that it can't just delete it's resources and then sit there; it needs to return a value. It is up to you to decide if a canceled future will return Pending forever, or if it will return a value in Ready. Just be aware that if other Futures are awaiting it, they won't be able to start until Ready is returned.
+
+对于可取消的 Future，一个常见的技巧是让它们返回一个带有错误的结果，表明该 Future 被取消了；这将允许任何正在等待被取消的 Future 的人有机会推进，因为他们知道他们所依赖的 Future 被取消了。还有其他的问题，但超出了本书的范围。阅读 [futures](https://crates.io/crates/futures) 的文档和代码，可以更好地了解这些问题是什么。
+
+> A common technique for cancelable Futures is to have them return a Result with an error that signals the Future was canceled; that will permit any Futures that are awaiting the canceled Future a chance to progress, with the knowledge that the Future they depended on was canceled. There are additional concerns as well, but beyond the scope of this book. Read the documentation and code for the futures crate for a better understanding of what the concerns are.
+
+> 感谢 @ckaran 贡献的这段额外内容。
+>
+> > Thanks to @ckaran for contributing this bonus segment.
+
+---
+
+[下一节：Futures 和运行时工作原理的心智模型](a-mental-model-of-how-futures-and-runtimes-work.md)

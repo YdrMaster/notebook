@@ -46,5 +46,5 @@ Unikraft 是用 C 实现的，不可避免地遇到了 C 工程性差的问题�
 
 ## 参考文档
 
-- [Unikraft 论文翻译](/tranlation/20220923-unikraft.md)
+- [Unikraft 论文翻译](/translation/20220923-unikraft.md)
 - [某同学的论文纪要](https://mstmoonshine.github.io/p/unikraft/)

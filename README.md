@@ -1,7 +1,7 @@
 ﻿# 笔记
 
 - [随笔](/随笔/toc.md)
-- [翻译](/tranlation/toc.md)
+- [翻译](/translation/toc.md)
 - [`zCore`](/zCore)
   - [rCore-Tutorial-v3 lab3 笔记](/zCore/20220312-lab3.md)
   - [用户态驱动](/zCore/user-mode-driver/20220415-summary.md)
@@ -30,11 +30,11 @@
 
 ### 翻译
 
-- 20220330-[微软研究院锐评 `fork`](/tranlation/20220330-get-fork-out-of-my-os.md)
+- 20220330-[微软研究院锐评 `fork`](/translation/20220330-get-fork-out-of-my-os.md)
   > 需要实现 `fork` 的时候写完
-- 20220509-[SBI 规范 v1.0](/tranlation/20220509-riscv-sbi-v1/toc.md)
+- 20220509-[SBI 规范 v1.0](/translation/20220509-riscv-sbi-v1/toc.md)
   > 用什么写什么
-- 20220528-[设备树规范](/tranlation/20220528-devicetree/toc.md)
+- 20220528-[设备树规范](/translation/20220528-devicetree/toc.md)
   > 用什么写什么
-- 20220624-[虚拟 IO 设备标准 v1.2](/tranlation/20220624-virtio/toc.md)
+- 20220624-[虚拟 IO 设备标准 v1.2](/translation/20220624-virtio/toc.md)
   > 用什么写什么

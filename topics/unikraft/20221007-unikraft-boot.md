@@ -178,7 +178,7 @@ void ukplat_entry_argp(char *arg0, char *argb, __sz argb_len) __noreturn;
 >
 > @param argb_len 参数缓冲区的长度（当 `argb` 应该被处理为零结尾时，设置为 `__SZ_MAX`）。
 
-这里实际调用的是静态链接进来的 ukboot 提供的实现，根据[论文描述](/tranlation/20220923-unikraft.md#3-Unikraft-架构和-API)，ukboot 是一个默认的启动流程，可以由接口相同的另一个库替换掉。
+这里实际调用的是静态链接进来的 ukboot 提供的实现，根据[论文描述](/translation/20220923-unikraft.md#3-Unikraft-架构和-API)，ukboot 是一个默认的启动流程，可以由接口相同的另一个库替换掉。
 
 ### ukboot
 
