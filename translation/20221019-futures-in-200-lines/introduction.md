@@ -2,6 +2,8 @@
 
 > Futures Explained in 200 Lines of Rust
 
+> [原文](https://cfsamson.github.io/books-futures-explained/introduction.html)
+
 本书旨在用实例驱动的方法解释 Rust 中的 Futures，探讨它们为什么被设计成这样，以及它们是如何工作的。我们还将介绍还有什么方法能处理编程中的并发问题。
 
 > This book aims to explain Futures in Rust using an example driven approach, exploring why they're designed the way they are, and how they work. We'll also take a look at some of the alternatives we have when dealing with concurrency in programming.
