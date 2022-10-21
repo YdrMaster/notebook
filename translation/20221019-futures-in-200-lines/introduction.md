@@ -54,9 +54,9 @@
 
 > 本书是开源编写的，欢迎大家投稿。你可以在这里找到[这本书本身的仓库](https://github.com/cfsamson/books-futures-explained)。你可以在[这里](https://github.com/cfsamson/examples-futures)找到最后的例子，以便克隆、分叉或拷贝。任何建议或改进都可以以 PR 或 issue 形式提交给本书。
 >
-> 一如既往，我们欢迎各种反馈。
->
 > > This book is developed in the open, and contributions are welcome. You'll find the repository for the book itself here. The final example which you can clone, fork or copy can be found here. Any suggestions or improvements can be filed as a PR or in the issue tracker for the book.
+>
+> 一如既往，我们欢迎各种反馈。
 >
 > > As always, all kinds of feedback is welcome.
 
@@ -65,6 +65,8 @@
 > Reader exercises and further reading
 
 在[最后一章](conclusion-and-exercises.md)中，如果你想进一步探索，我冒昧地提出了一些小练习。
+
+> In the last chapter I've taken the liberty to suggest some small exercises if you want to explore a little further.
 
 本书也是我写的第四本关于 Rust 并发编程的书。如果你喜欢它，你可能也想看看其他的：
 
@@ -78,7 +80,7 @@
 > - The Node Experiment - Exploring Async Basics with Rust
 > - Epoll, Kqueue and IOCP Explained with Rust
 
-## 功劳和感谢
+## 鸣谢
 
 > Credits and thanks
 
@@ -104,4 +106,4 @@
 
 ---
 
-[下一节：一些背景知识](some-background-information.md)
+[下一章：一些背景知识](some-background-information.md)

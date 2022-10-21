@@ -607,4 +607,4 @@ pub fn main() {
 
 ---
 
-[下一章——Pin](pin.md)
+[下一章：Pin](pin.md)

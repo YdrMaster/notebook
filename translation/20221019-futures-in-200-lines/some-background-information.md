@@ -120,7 +120,7 @@ fn main() {
 
 > In this book I'll use the term "green threads" to mean stackful coroutines to differentiate them from the other continuation mechanisms described in this chapter. You can, however, see the term "green threads" be used to describe a broader set of continuation mechanisms in different littrature or discussions on the internet.
 
-绿色线程使用与操作系统相同的机制--为每个任务创建一个线程，建立一个栈，保存 CPU 的状态，并通过“上下文切换”从一个任务（线程）跳到另一个。
+绿色线程使用与操作系统相同的机制——为每个任务创建一个线程，建立一个栈，保存 CPU 的状态，并通过“上下文切换”从一个任务（线程）跳到另一个。
 
 > Green threads use the same mechanism as an OS - creating a thread for each task, setting up a stack, saving the CPU's state, and jumping from one task(thread) to another by doing a "context switch".
 
@@ -649,4 +649,4 @@ async function run() {
 
 ---
 
-[下一节：Rust 中的 Futures](futures-in-rust.md)
+[下一章：Rust 中的 Futures](futures-in-rust.md)

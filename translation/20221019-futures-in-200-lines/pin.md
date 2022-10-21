@@ -388,41 +388,69 @@ pub fn main() {
 
 > There are ways to safely give some guarantees on stack pinning as well, but right now you need to use a crate like pin_project to do that.
 
-Practical rules for Pinning
+## Pin 的实用规则
 
-If T: Unpin (which is the default), then Pin<'a, T> is entirely equivalent to &'a mut T. in other words: Unpin means it's OK for this type to be moved even when pinned, so Pin will have no effect on such a type.
+> Practical rules for Pinning
 
-Getting a &mut T to a pinned T requires unsafe if T: !Unpin. In other words: requiring a pinned pointer to a type which is !Unpin prevents the user of that API from moving that value unless they choose to write unsafe code.
+1. 如果 `T: Unpin`（这是默认的），那么 `Pin<'a, T>` 完全等同于 `&'a mut T`。换句话说：`Unpin` 意味着这个类型即使被钉住也可以被移动，所以 `Pin` 对这样的类型没有影响。
+2. 如果 `T: !Unpin`，获得借用用钉住的 `T` 的 `&mut T` 是不安全的。换句话说：如果一个类型是 `!Unpin`，指向它的指针需要钉住，除非用户选择编写 `unsafe` 代码；这就阻止了此 API 的用户移动这个值。
+3. 钉住对内存分配没有什么特别的作用，比如把它没有被放到某些“只读”的内存或做其他花哨的操作。它只是使用类型系统来阻止对这个值的某些操作。
+4. 大多数标准库类型实现了 `Unpin`。你在 Rust 中遇到的大多数“普通”类型也是如此。Futures 和生成器是两个例外。
+5. `Pin` 的主要用例是允许自引用类型，稳定它们的全部理由就是为了允许这样做。
+6. 属于 `!Unpin` 的对象背后的实现很可能是不安全的。在被钉住后移动这样的类型会导致宇宙崩溃。截至本书编写之时，创建和读取自引用结构的字段仍然需要 `unsafe`（唯一的方法是创建一个包含指向自身的裸指针的结构体）。
+7. 如果设置了相应的 `feature`，你可以在 nightly 中在一个类型上添加一个 `!Unpin` 绑定，或者在稳定版上向你的类型添加一个 `std::marker::PhantomPinned`。
+8. 你可以把一个对象钉在栈上或堆上。
+9. 将一个 `!Unpin` 对象钉在栈上需要 `unsafe`。
+10. 将一个 `!Unpin` 对象钉在堆上不需要 `unsafe`。有一个快捷方式 `Box::pin` 可以做这件事。
 
-Pinning does nothing special with memory allocation like putting it into some "read only" memory or anything fancy. It only uses the type system to prevent certain operations on this value.
+> 1. If T: Unpin (which is the default), then Pin<'a, T> is entirely equivalent to &'a mut T. in other words: Unpin means it's OK for this type to be moved even when pinned, so Pin will have no effect on such a type.
+> 2. Getting a &mut T to a pinned T requires unsafe if T: !Unpin. In other words: requiring a pinned pointer to a type which is !Unpin prevents the user of that API from moving that value unless they choose to write unsafe code.
+> 3. Pinning does nothing special with memory allocation like putting it into some "read only" memory or anything fancy. It only uses the type system to prevent certain operations on this value.
+> 4. Most standard library types implement Unpin. The same goes for most "normal" types you encounter in Rust. Futures and Generators are two exceptions.
+> 5. The main use case for Pin is to allow self referential types, the whole justification for stabilizing them was to allow that.
+> 6. The implementation behind objects that are !Unpin is most likely unsafe. Moving such a type after it has been pinned can cause the universe to crash. As of the time of writing this book, creating and reading fields of a self referential struct still requires unsafe (the only way to do it is to create a struct containing raw pointers to itself).
+> 7. You can add a !Unpin bound on a type on nightly with a feature flag, or by adding std::marker::PhantomPinned to your type on stable.
+> 8. You can either pin an object to the stack or to the heap.
+> 9. Pinning a !Unpin object to the stack requires unsafe
+> 10. Pinning a !Unpin object to the heap does not require unsafe. There is a shortcut for doing this using Box::pin.
 
-Most standard library types implement Unpin. The same goes for most "normal" types you encounter in Rust. Futures and Generators are two exceptions.
+> `unsafe` 的代码并不意味着它真的“不安全”，它只是解除了你通常从编译器得到的保证。一个 `unsafe` 的实现可以是完全安全的，但你没有 *safety net*。
+>
+> > Unsafe code does not mean it's literally "unsafe", it only relieves the guarantees you normally get from the compiler. An unsafe implementation can be perfectly safe to do, but you have no safety net.
+>
+> > **补充说明** 不知道 *safety net* 是什么东西
 
-The main use case for Pin is to allow self referential types, the whole justification for stabilizing them was to allow that.
+### 投影式/结构式钉住
 
-The implementation behind objects that are !Unpin is most likely unsafe. Moving such a type after it has been pinned can cause the universe to crash. As of the time of writing this book, creating and reading fields of a self referential struct still requires unsafe (the only way to do it is to create a struct containing raw pointers to itself).
+> Projection/structural pinning
 
-You can add a !Unpin bound on a type on nightly with a feature flag, or by adding std::marker::PhantomPinned to your type on stable.
+简而言之，“投影”是一个编程语言术语。`mystruct.field1` 就是一个投影。结构式钉住是在字段上使用 `Pin`。这有几个注意事项，不太常见，所以我参考了这方面的文档。
 
-You can either pin an object to the stack or to the heap.
+> In short, projection is a programming language term. mystruct.field1 is a projection. Structural pinning is using Pin on fields. This has several caveats and is not something you'll normally see so I refer to the documentation for that.
 
-Pinning a !Unpin object to the stack requires unsafe
+### `Pin` 和 `Drop`
 
-Pinning a !Unpin object to the heap does not require unsafe. There is a shortcut for doing this using Box::pin.
+> Pin and Drop
 
-Unsafe code does not mean it's literally "unsafe", it only relieves the guarantees you normally get from the compiler. An unsafe implementation can be perfectly safe to do, but you have no safety net.
+`Pin` 保证从值被钉住的那一刻起就存在，直到析构。在 `Drop` 的实现中，你需要一个对 `self` 的可变引用，这意味着在为被钉住的类型实现 `Drop` 时必须特别小心。
 
-Projection/structural pinning
-In short, projection is a programming language term. mystruct.field1 is a projection. Structural pinning is using Pin on fields. This has several caveats and is not something you'll normally see so I refer to the documentation for that.
+> The Pin guarantee exists from the moment the value is pinned until it's dropped. In the Drop implementation you take a mutable reference to self, which means extra care must be taken when implementing Drop for pinned types.
 
-Pin and Drop
-The Pin guarantee exists from the moment the value is pinned until it's dropped. In the Drop implementation you take a mutable reference to self, which means extra care must be taken when implementing Drop for pinned types.
+## 联合使用
 
-Putting it all together
-This is exactly what we'll do when we implement our own Future, so stay tuned, we're soon finished.
+> Putting it all together
 
-Bonus section: Fixing our self-referential generator and learning more about Pin
-But now, let's prevent this problem using Pin. I've commented along the way to make it easier to spot and understand the changes we need to make.
+这正是我们在实现我们自己的 `Future` 时要做的事情，所以敬请关注，我们很快就会完成。
+
+> This is exactly what we'll do when we implement our own Future, so stay tuned, we're soon finished.
+
+## 补充章节：修复我们的自引用生成器并进一步了解 Pin
+
+> Bonus section: Fixing our self-referential generator and learning more about Pin
+
+但是现在，让我们用 `Pin` 来防止这个问题。我沿途做了注释，以使我们更容易发现和理解我们需要做的改变。
+
+> But now, let's prevent this problem using Pin. I've commented along the way to make it easier to spot and understand the changes we need to make.
 
 ```rust
 #![feature(auto_traits, negative_impls)] // needed to implement `!Unpin`
@@ -536,8 +564,20 @@ impl Generator for GeneratorA {
 }
 ```
 
-Now, as you see, the consumer of this API must either:
+现在，正如你所看到的，这个 API 的接收者必须二选一：
 
-Box the value and thereby allocating it on the heap
-Use unsafe and pin the value to the stack. The user knows that if they move the value afterwards it will violate the guarantee they promise to uphold when they did their unsafe implementation.
-Hopefully, after this you'll have an idea of what happens when you use the yield or await keywords inside an async function, and why we need Pin if we want to be able to safely borrow across yield/await points.
+> Now, as you see, the consumer of this API must either:
+
+1. 用 `Box` 包装值并分配在堆上
+2. 使用 `unsafe` 将值钉在栈上。用户知道，如果他们事后移动这个值，就会违反他们在做不安全实现时承诺的保证。
+
+> 1. Box the value and thereby allocating it on the heap
+> 2. Use unsafe and pin the value to the stack. The user knows that if they move the value afterwards it will violate the guarantee they promise to uphold when they did their unsafe implementation.
+
+希望在这之后，你会对在异步函数中使用 `yield` 或 `await` 关键字时发生的情况有所了解，以及如果我们想在让出/等待点之间安全地借用，为什么我们需要 `Pin`。
+
+> Hopefully, after this you'll have an idea of what happens when you use the yield or await keywords inside an async function, and why we need Pin if we want to be able to safely borrow across yield/await points.
+
+---
+
+[下一章：实现 Futures——主要示例](implementing-futures-main-example.md)
