@@ -3,6 +3,8 @@
 > Futures Explained in 200 Lines of Rust
 
 > [原文](https://cfsamson.github.io/books-futures-explained/introduction.html)
+>
+> [相关阅读](https://night-cruise.github.io/async-rust/)
 
 本书旨在用实例驱动的方法解释 Rust 中的 Futures，探讨它们为什么被设计成这样，以及它们是如何工作的。我们还将介绍还有什么方法能处理编程中的并发问题。
 
