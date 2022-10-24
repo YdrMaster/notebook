@@ -22,7 +22,7 @@
 
 > Implementing our own Futures
 
-让我们先把所有的导入弄好，方便你跟上了
+让我们先把所有的导入弄好，方便你跟上
 
 > Let's start off by getting all our imports right away so you can follow along
 
@@ -76,11 +76,12 @@ Rust 为反应器和执行器提供了一种通过 `Waker` 进行通信的方法
 // > Our executor takes any object which implements the `Future` trait
 fn block_on<F: Future>(mut future: F) -> F::Output {
 
-    // 我们做的第一件事是构造一个 `Waker`，它会被传给 `reactor`，并在事件就绪是唤醒我们。
+    // 我们做的第一件事是构造一个 `Waker`，它会被传给 `reactor`，并在事件就绪时唤醒我们。
     //
     // > the first thing we do is to construct a `Waker` which we'll pass on to
     // > the `reactor` so it can wake us up when an event is ready.
     let mywaker = Arc::new(MyWaker{ thread: thread::current() });
+    // > **补充说明** `Arc<MyWaker>` 转化成裸指针存到了 `waker` 里，这个 `Arc` 只提供引用计数的结构，失去了 RAII。
     let waker = mywaker_into_waker(Arc::into_raw(mywaker));
 
     // 上下文结构体只是 `Waker` 对象的一个包装。可能将来会添加更多东西，但现在它就是一个包装。
@@ -98,6 +99,8 @@ fn block_on<F: Future>(mut future: F) -> F::Output {
     // > allocation. We could `Box::pin` it too if we wanted. This is however
     // > safe since we shadow `future` so it can't be accessed again and will
     // > not move until it's dropped.
+    //
+    // > **补充说明** 这意味着我们告诉编译器，`future` 已经钉住了，不会移动。它是 unsafe，因为从此以后不移动 future 的职责落到我们肩上了。
     let mut future = unsafe { Pin::new_unchecked(&mut future) };
 
     // 我们在一个循环里轮询，但它不是忙等。当这两种情况之一发生时它才会运行：一个事件发生，或者一次“假唤醒”
@@ -124,7 +127,7 @@ fn block_on<F: Future>(mut future: F) -> F::Output {
 }
 ```
 
-在本章中你能看到的所有例子中，我选择对代码进行大量的注释。我发现这样做更容易理解，所以我不会在文档中重复注释的内容，只关注一些可能需要进一步解释的重要方面。
+在本章中你能看到的所有例子中，我选择对代码进行大量的注释。我发现这样做更容易理解，所以我不会在文档中重复注释的内容，只关注一些可能需要进一步解释的重点。
 
 > In all the examples you'll see in this chapter I've chosen to comment the code extensively. I find it easier to follow along that way so I'll not repeat myself here and focus only on some important aspects that might need further explanation.
 
@@ -196,6 +199,8 @@ pub struct Task {
 //
 // > These are function definitions we'll use for our waker. Remember the
 // > "Trait Objects" chapter earlier.
+//
+// > **补充说明** 这个操作会使 `MyWaker` 的引用计数 -1。
 fn mywaker_wake(s: &MyWaker) {
     let waker_ptr: *const MyWaker = s;
     let waker_arc = unsafe {Arc::from_raw(waker_ptr)};
@@ -219,6 +224,8 @@ fn mywaker_clone(s: &MyWaker) -> RawWaker {
 // to when we created a `Trait Object` from scratch we don't need to concern
 // ourselves with the actual layout of the `vtable` and only provide a fixed
 // set of functions
+//
+// > **补充说明** ↑ 里的 `This` 指的是 `RawWakerVTable::new`。
 const VTABLE: RawWakerVTable = unsafe {
     RawWakerVTable::new(
         |s| mywaker_clone(&*(s as *const MyWaker)),   // 克隆 clone
@@ -249,7 +256,7 @@ impl Task {
 impl Future for Task {
     type Output = usize;
 
-    // 轮询驱动状态机推进，并且这也是我们驱动 future 完成要调用的唯一的方法。
+    // 轮询驱动状态机推进，并且这也是我们驱动 future 完成的过程中要调用的唯一的方法。
     //
     // > Poll is the what drives the state machine forward and it's the only
     // > method we'll need to call to drive futures to completion.
@@ -425,7 +432,7 @@ enum Event {
 
 impl Reactor {
 
-    // 我们选组返回一个原子引用计数、互斥锁保护、堆分配的 `Reactor`。只是为了让它好解释……
+    // 我们选择返回一个原子引用计数、互斥锁保护、堆分配的 `Reactor`。只是为了让它好解释……
     // 不是，我们这么做的原因是：
     //
     // 1. 我们知道只有线程安全的反应器才会被创建出来。
@@ -438,6 +445,8 @@ impl Reactor {
     // > 1. We know that only thread-safe reactors will be created.
     // > 2. By heap allocating it we can obtain a reference to a stable address
     // > that's not dependent on the stack frame of the function that called `new`
+    //
+    // > **补充说明** 这个 `Box` 究竟是干啥用的……`Arc` 就会堆分配并获得稳定地址啊？
     fn new() -> Arc<Mutex<Box<Self>>> {
         let (tx, rx) = channel::<Event>();
         let reactor = Arc::new(Mutex::new(Box::new(Reactor {
@@ -561,6 +570,298 @@ impl Drop for Reactor {
 }
 ```
 
+虽然有很多代码，但本质上我们只是生成一个新的线程，并让它睡眠我们在创建任务时指定的一段时间。
+
+> It's a lot of code though, but essentially we just spawn off a new thread and make it sleep for some time which we specify when we create a Task.
+
+现在，让我们测试一下我们的代码，看看它是否有效。因为我们在这里睡了几秒钟，所以要给它一些时间来运行。
+
+> Now, let's test our code and see if it works. Since we're sleeping for a couple of seconds here, just give it some time to run.
+
+在最后一章中，我们[在一个可编辑的窗口中列出了全部的 200 行](https://cfsamson.github.io/books-futures-explained/8_finished_example.html)，你可以按照你喜欢的方式进行编辑和修改。
+
+> In the last chapter we have the whole 200 lines in an editable window which you can edit and change the way you like.
+
+```rust
+fn main() {
+    // 这是为了方便看到我们的 Future 被处理了
+    //
+    // > This is just to make it easier for us to see when our Future was resolved
+    let start = Instant::now();
+
+    // 很多运行时会创建一个全局的 `reactor` 但我们把它作为参数传递
+    //
+    // > Many runtimes create a global `reactor` we pass it as an argument
+    let reactor = Reactor::new();
+
+    // 我们创建了 2 个任务：
+    // - 第一个参数是那个 `reactor`
+    // - 第二个参数是用秒表示的超时时间
+    // - 第三个参数是用来区分任务的 `id`
+    //
+    // > We create two tasks:
+    // > - first parameter is the `reactor`
+    // > - the second is a timeout in seconds
+    // > - the third is an `id` to identify the task
+    let future1 = Task::new(reactor.clone(), 1, 1);
+    let future2 = Task::new(reactor.clone(), 2, 2);
+
+    // `async` 块和 `async fn` 工作方式相同，它被编译成状态机，在每个 `await` 点让出。
+    //
+    // > an `async` block works the same way as an `async fn` in that it compiles
+    // > our code into a state machine, `yielding` at every `await` point.
+    let fut1 = async {
+        let val = future1.await;
+        println!("Got {} at time: {:.2}.", val, start.elapsed().as_secs_f32());
+    };
+
+    let fut2 = async {
+        let val = future2.await;
+        println!("Got {} at time: {:.2}.", val, start.elapsed().as_secs_f32());
+    };
+
+    // 我们的只能运行一个执行器，执行器只能运行一个 future，这倒是很正常。
+    // 你有一组包含很多 future 的操作，最后作为一个单一的 future，驱动它们全部完成。
+    //
+    // > Our executor can only run one and one future, this is pretty normal
+    // > though. You have a set of operations containing many futures that
+    // > ends up as a single future that drives them all to completion.
+    let mainfut = async {
+        fut1.await;
+        fut2.await;
+    };
+
+    // 这个执行器会阻塞主线程知道所有 future 都处理完。
+    //
+    // > This executor will block the main thread until the futures are resolved
+    block_on(mainfut);
+}
+```
+
+我添加了一些调试打印，以便我们可以观察到几件事情。
+
+> I added a some debug printouts so we can observe a couple of things:
+
+1. Waker 对象看起来就像我们在前一章谈到的特质对象一样
+2. 程序从开始到结束的流程
+
+> 1. How the Waker object looks just like the trait object we talked about in an earlier chapter
+> 2. The program flow from start to finish
+
+第二点与我们即将进入的最后一段有关。
+
+> The last point is relevant when we move on the the last paragraph.
+
+> 在我们的例子中，有一件微妙的事情需要注意。如果我们为两个事件传入相同的 id 会发生什么？
+>
+> > There is one subtle thing to note about our example. What happens if we pass in the same id for both events?
+>
+> ```rust
+> let future1 = Task::new(reactor.clone(), 1, 1);
+> let future2 = Task::new(reactor.clone(), 2, 1);
+> ```
+>
+> 我们将在最后一章的练习中更多地讨论这个问题，在那里我们还将研究如何解决这个问题。现在，只需把它记下来，以便你能意识到这个问题。
+>
+> > We'll discuss this a bit more under exercises in the last chapter where we also look at ways to fix it. For now, just make a note of it so you're aware of the problem.
+
+## async/await 和并发性
+
+> Async/Await and concurrency
+
+`async` 关键字可以用在函数上，如 `async fn(...)`，也可以用在一个块上，如 `async { ... }`。两者都会把你的函数或块变成一个 Future。
+
+> The async keyword can be used on functions as in async fn(...) or on a block as in async { ... }. Both will turn your function, or block, into a Future.
+
+这些 Future 是相当简单的。想象一下我们前几章的生成器。每个等待点就是一个让出点。
+
+> These Futures are rather simple. Imagine our generator from a few chapters back. Every await point is like a yield point.
+
+我们不是让出一个我们传入的值，而是让出我们正在等待的下一个 Future 上调用 `poll` 的结果。
+
+> Instead of yielding a value we pass in, we yield the result of calling poll on the next Future we're awaiting.
+
+我们的 `mainfut` 包含两个非叶子 future，它将对其调用 `poll`。**非叶子 future**有一个 `poll` 方法，简单地轮询其内部的期货，这些状态机被轮询，直到最后某个“叶子 future”返回 `Ready` 或 `Pending`。
+
+> Our mainfut contains two non-leaf futures which it will call poll on. Non-leaf-futures has a poll method that simply polls their inner futures and these state machines are polled until some "leaf future" in the end either returns Ready or Pending.
+
+我们的例子现在的样子，并不比普通的同步代码好多少。为了让我们能够同时等待多个 future，我们需要以某种方式发射它们，以便执行器开始同时运行它们。
+
+> The way our example is right now, it's not much better than regular synchronous code. For us to actually await multiple futures at the same time we somehow need to spawn them so the executor starts running them concurrently.
+
+我们的例子现在产生这样的结果：
+
+> Our example as it stands now returns this:
+
+```bash
+Future got 1 at time: 1.00.
+Future got 2 at time: 3.00.
+```
+
+如果这些 future 是异步执行的，我们会期望看到：
+
+> If these Futures were executed asynchronously we would expect to see:
+
+```bash
+Future got 1 at time: 1.00.
+Future got 2 at time: 2.00.
+```
+
+> 请注意，这并不意味着它们需要并行运行。它们可以并行运行，但并非必须。记住，我们在等待一些外部资源，所以我们可以在一个线程上发射许多这样的调用，并在事件解决时处理每个事件。
+>
+> > Note that this doesn't mean they need to run in parallel. They can run in parallel but there is no requirement. Remember that we're waiting for some external resource so we can fire off many such calls on a single thread and handle each event as it resolves.
+
+现在，是时候向你推荐一些更好的资源来实现一个更好的执行器了。到目前为止，你应该对 Futures 的概念有了相当好的理解。
+
+> Now, this is the point where I'll refer you to some better resources for implementing a better executor. You should have a pretty good understanding of the concept of Futures by now helping you along the way.
+
+下一步应该是了解更高级的运行时是如何工作的，以及它们是如何实现以不同方式运行并完成 Futures 的。
+
+> The next step should be getting to know how more advanced runtimes work and how they implement different ways of running Futures to completion.
+
+[如果我是你，我接下来会阅读这个，并尝试为我们的例子实现它。](https://cfsamson.github.io/books-futures-explained/conclusion.html#building-a-better-exectuor)
+
+> If I were you I would read this next, and try to implement it for our example..
+
+实际上现在就这些了。可能还有很多东西要学，今天就到这里吧。
+
+> That's actually it for now. There as probably much more to learn, this is enough for today.
+
+我希望在读完这本书后，探索 Futures 和异步会变得更容易，我真的希望你能继续进一步探索。
+
+> I hope exploring Futures and async in general gets easier after this read and I do really hope that you do continue to explore further.
+
+不要忘记最后一章的练习😊。
+
+> Don't forget the exercises in the last chapter 😊.
+
 ## 补充章节——暂停线程的正确方法
 
 > Bonus Section - a Proper Way to Park our Thread
+
+正如我们在本章前面所解释的，简单地调用 `thread::park` 其实并不足以实现一个合理的反应器。你还可以实现一个像 crossbeam 中的 `Parker` 那样的工具：[crossbeam::sync::Parker](https://docs.rs/crossbeam/0.7.3/crossbeam/sync/struct.Parker.html)
+
+> As we explained earlier in our chapter, simply calling thread::park is not really sufficient to implement a proper reactor. You can also reach a tool like the Parker in crossbeam: crossbeam::sync::Parker
+
+由于不需要很多行代码就能自己创建一个有效的解决方案，我们将展示我们如何通过使用条件变量和互斥锁来解决这个问题。
+
+> Since it doesn't require many lines of code to create a working solution ourselves we'll show how we can solve that by using a Condvar and a Mutex instead.
+
+先这样实现我们自己的 `Parker` 吧：
+
+> Start by implementing our own Parker like this:
+
+```rust
+#[derive(Default)]
+struct Parker(Mutex<bool>, Condvar);
+
+impl Parker {
+    fn park(&self) {
+
+        // 我们锁定互斥锁，它保护着表示我们是否应该恢复执行的标记。
+        //
+        // > We aquire a lock to the Mutex which protects our flag indicating if we
+        // > should resume execution or not.
+        let mut resumable = self.0.lock().unwrap();
+
+            // 我们把这个放在一个循环里，因为有可能我们被唤醒了但标记并没有变。如果出现这种情况我们继续睡。
+            //
+            // > We put this in a loop since there is a chance we'll get woken, but
+            // > our flag hasn't changed. If that happens, we simply go back to sleep.
+            while !*resumable {
+
+                // 我们睡到有人发送通知。
+                //
+                // We sleep until someone notifies us
+                resumable = self.1.wait(resumable).unwrap();
+            }
+
+        // 我们立即将条件设为 false，这样下次调用 `park` 时我们就能正确进入睡眠。
+        //
+        // > We immidiately set the condition to false, so that next time we call `park` we'll
+        // > go right to sleep.
+        *resumable = false;
+    }
+
+    fn unpark(&self) {
+        // 我们简单地锁定标记的锁，并把条件设为可执行。
+        //
+        // > We simply acquire a lock to our flag and sets the condition to `runnable` when we
+        // get it.
+        *self.0.lock().unwrap() = true;
+
+        // 通知条件变量，使其唤醒并恢复执行。
+        //
+        // > We notify our `Condvar` so it wakes up and resumes.
+        self.1.notify_one();
+    }
+}
+```
+
+Rust 中的 `Condvar` 被设计为与 `Mutex` 一起工作。通常情况下，你会以为我们在睡眠前不会释放在 `self.0.lock().unwrap();` 中获得的互斥锁。这意味着我们的 `unpark` 函数永远拿不到标记的锁，我们就会陷入死锁。
+
+> The Condvar in Rust is designed to work together with a Mutex. Usually, you'd think that we don't release the mutex-lock we acquire in self.0.lock().unwrap(); before we go to sleep. Which means that our unpark function never will acquire a lock to our flag and we deadlock.
+
+使用 `Condvar` 可以避免这种情况，因为 `Condvar` 会消耗我们的锁，所以进入睡眠状态的时候锁就被释放。
+
+> Using Condvar we avoid this since the Condvar will consume our lock so it's released at the moment we go to sleep.
+
+当再次恢复时，`Condvar` 会返回锁，所以可以继续操作它。
+
+> When we resume again, our Condvar returns our lock so we can continue to operate on it.
+
+这意味着我们需要对执行器做一些非常细微的改变，比如这样：
+
+> This means we need to make some very slight changes to our executor like this:
+
+```rust
+fn block_on<F: Future>(mut future: F) -> F::Output {
+    let parker = Arc::new(Parker::default()); // <--- NB!
+    let mywaker = Arc::new(MyWaker { parker: parker.clone() }); // <--- NB!
+    let waker = mywaker_into_waker(Arc::into_raw(mywaker));
+    let mut cx = Context::from_waker(&waker);
+
+    // 安全性：遮蔽 `future`，这样它就不能再次访问。
+    //
+    // > SAFETY: we shadow `future` so it can't be accessed again.
+    let mut future = unsafe { Pin::new_unchecked(&mut future) };
+    loop {
+        match Future::poll(future.as_mut(), &mut cx) {
+            Poll::Ready(val) => break val,
+            Poll::Pending => parker.park(), // <--- NB!
+        };
+    }
+}
+```
+
+然后我们需要这样修改 `Waker`：
+
+> And we need to change our Waker like this:
+
+```rust
+#[derive(Clone)]
+struct MyWaker {
+    parker: Arc<Parker>,
+}
+
+fn mywaker_wake(s: &MyWaker) {
+    let waker_arc = unsafe { Arc::from_raw(s) };
+    waker_arc.parker.unpark();
+}
+```
+
+这就是全部内容。
+
+> And that's really all there is to it.
+
+> 如果你查看了展示暂停/恢复如何[导致微妙问题](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=b2343661fe3d271c91c6977ab8e681d0)的 playground 链接，你可以[查看这个示例](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=bebef0f8a8ce6a9d0d32442cc8381595)，它显示了我们的最终版本如何避免了这个问题。
+>
+> > If you checked out the playground link that showcased how park/unpark could cause subtle problems you can check out this example which shows how our final version avoids this problem.
+
+下一章展示了我们完成的代码，如果你愿意的话，可以进一步探索这个改进。
+
+> The next chapter shows our finished code with this improvement which you can explore further if you wish.
+
+---
+
+[下一章：完成的示例（可编辑）](finished-example-editable.md)
