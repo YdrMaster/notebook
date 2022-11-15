@@ -13,3 +13,4 @@
 - 20221019-[200 行 Rust 解读 Futures](/translation/20221019-futures-in-200-lines/introduction.md)
 - 20221108-[RISC-V 高级核内中断器规范](/translation/20221108-aclint.md)
 - 20221110-[RISC-V 平台级中断控制器规范](/translation/20221110-plic/doc.md)
+- 20221115-[Binutil 里的 RISC-V 指令格式](/translation/20221115-insn.md)
