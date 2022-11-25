@@ -107,7 +107,7 @@ PLIC 硬件只支持中断的组播，这样，所有可用的目标都将收到
 - 全局中断从源发送到中断门控，该门控处理来自每个源的中断信号
 - 中断门控随后向 PLIC 核芯发送单个中断请求，PLIC 核芯将这些请求锁在核芯的中断挂起位（IP）中。
 - PLIC 核芯会将中断通知转发给一个或多个目标，只要这些目标允许接受这种中断，并且挂起中断的优先级超过了它们各自的阈值。
-- 当目标接受外部中断时，它将发送一个中断声明，以从 PLIC 核芯检索该目标的最高优先级全局中断源的标识符。
+- 当目标接受外部中断时，它将发送一个中断认领，以从 PLIC 核芯检索该目标的最高优先级全局中断源的标识符。
 - 然后，PLIC 核芯清除相应的中断源挂起位。
 - 在目标为中断提供服务后，它向相关的中断门控发送一个中断完成消息
 - 中断门控现在可以将同一中断源的另一个中断请求转发给 PLIC。
@@ -146,7 +146,7 @@ PLIC 硬件只支持中断的组播，这样，所有可用的目标都将收到
 
   每个上下文的中断优先级阈值。
 
-- **中断声明寄存器：**
+- **中断认领寄存器：**
 
   获得每个上下文的中断源 ID 的寄存器。
 
@@ -224,15 +224,15 @@ base + 0x1F1FFC: 源 992-1023 在上下文 15871 上的使能位
 ...
 base + 0x1FFFFC: 保留
 base + 0x200000: 上下文 0 的优先级阈值
-base + 0x200004: 上下文 0 的声明/完成
+base + 0x200004: 上下文 0 的认领/完成
 base + 0x200008: 保留
 ...
 base + 0x200FFC: 保留
 base + 0x201000: 上下文 1 的优先级阈值
-base + 0x201004: 上下文 1 的声明/完成
+base + 0x201004: 上下文 1 的认领/完成
 ...
 base + 0x3FFF000: 上下文 15871 的优先级阈值
-base + 0x3FFF004: 上下文 15871 的声明/完成
+base + 0x3FFF004: 上下文 15871 的认领/完成
 base + 0x3FFF008: 保留
 ...
 base + 0x3FFFFFC: 保留
@@ -336,7 +336,7 @@ PLIC 核芯中的中断源挂起位的当前状态组织为 32 位寄存器，�
 
 > The current status of the interrupt source pending bits in the PLIC core can be read from the pending array, organized as 32-bit register. The pending bit for interrupt ID N is stored in bit (N mod 32) of word (N/32). Bit 0 of word 0, which represents the non-existent interrupt source 0, is hardwired to zero.
 
-PLIC 核芯中的一个挂起位可以通过设置关联的使能位然后执行声明来清除。
+PLIC 核芯中的一个挂起位可以通过设置关联的使能位然后执行认领来清除。
 
 > A pending bit in the PLIC core can be cleared by setting the associated enable bit then performing a claim.
 
@@ -441,3 +441,153 @@ PLIC 内存映射区域内的中断使能位块的基址固定为 0x002000。
 > ...
 > 0x1F1FFC: Interrupt Source #992 to #1023 on context 15871
 > ```
+
+## 第七章 优先级阈值
+
+> Chapter 7. Priority Thresholds
+
+PLIC 提供基于上下文的阈值寄存器，用于设置每个上下文的中断优先级阈值。该阈值寄存器是一个 WARL 字段。PLIC 将屏蔽所有优先级小于或等于阈值的 PLIC 中断。例如，阈值为 0 时，允许所有优先级为非 0 的中断。
+
+> PLIC provides context based threshold register for the settings of a interrupt priority threshold of each context. The threshold register is a WARL field. The PLIC will mask all PLIC interrupts of a priority less than or equal to threshold. For example, a threshold value of zero permits all interrupts with non-zero priority.
+
+优先级阈值寄存器块的基址位于 4K 对齐，从偏移量 0x200000 开始。
+
+> The base address of Priority Thresholds register block is located at 4K alignment starts from offset 0x200000.
+
+| PLIC 寄存器块名称 | 功能 | 寄存器块大小（字节） | 描述
+|-|-|-|-
+| 优先级阈值 | 15872 个上下文的优先级阈值 | 4096*15872=65011712(0x3e00000) 字节 | 这是用于设置每个上下文优先级阈值的寄存器
+
+> | PLIC Register Block Name | Function | Register Block Size in Byte | Description
+> |-|-|-|-
+> | Priority Threshold | Priority Threshold for 15872 contexts | 4096*15872=65011712(0x3e00000) bytes | This is the register of Priority Thresholds setting for each context
+
+### PLIC 中断优先级阈值内存映射
+
+> PLIC Interrupt Priority Thresholds Memory Map
+
+```plaintext
+0x200000: 上下文 0 的优先级阈值
+0x201000: 上下文 1 的优先级阈值
+0x202000: 上下文 2 的优先级阈值
+0x203000: 上下文 3 的优先级阈值
+...
+...
+...
+0x3FFF000: 上下文 15871 的优先级阈值
+```
+
+> ```plaintext
+> 0x200000: Priority threshold for context 0
+> 0x201000: Priority threshold for context 1
+> 0x202000: Priority threshold for context 2
+> 0x203000: Priority threshold for context 3
+> ...
+> ...
+> ...
+> 0x3FFF000: Priority threshold for context 15871
+> ```
+
+## 第八章 中断认领处理
+
+> Chapter 8. Interrupt Claim Process
+
+目标可能在收到中断通知后的某个时候决定对中断提供服务。目标向 PLIC 核芯发送中断认领信息，这通常会被实现为对一个非空闲内存映射的 I/O 控制寄存器的读操作。在收到认领消息后，PLIC 核芯将原子地确定目标的最高优先级的挂起中断的 ID，然后清除相应的源的 IP 位。然后，PLIC 核芯将把 ID 返回给目标。如果在认领时目标没有挂起的中断，PLIC 核芯将返回一个 ID 0。
+
+> Sometime after a target receives an interrupt notification, it might decide to service the interrupt. The target sends an interrupt claim message to the PLIC core, which will usually be implemented as a non-idempotent memory-mapped I/O control register read. On receiving a claim message, the PLIC core will atomically determine the ID of the highest-priority pending interrupt for the target and then clear down the corresponding source’s IP bit. The PLIC core will then return the ID to the target. The PLIC core will return an ID of zero, if there were no pending interrupts for the target when the claim was serviced.
+
+在最高优先级挂起中断被目标认领并清除了相应的 IP 位后，其他较低优先级的待处理中断可能会被目标看到，因此 PLIC 的 EIP 位在认领后可能不会被清除。中断处理程序可以在退出处理程序之前检查本地的 meip/heip/seip/ueip 位，以便更有效地服务于其他中断，而不必先恢复被中断的上下文又立即陷入另一个中断。
+
+> After the highest-priority pending interrupt is claimed by a target and the corresponding IP bit is cleared, other lower-priority pending interrupts might then become visible to the target, and so the PLIC EIP bit might not be cleared after a claim. The interrupt handler can check the local meip/heip/seip/ueip bits before exiting the handler, to allow more efficient service of other interrupts without first restoring the interrupted context and taking another interrupt trap.
+
+即使 EIP 没有被设置，硬件线程执行一次认领也是合法的。特别是，硬件线程可以将阈值设置为最大值以禁用中断通知，并周期性地认领以轮询活动中断，当然要实现轮询更简单的方法是清除权限级别 x 对应的 xie 寄存器中的外部中断使能。认领成功时，相应中断源的挂起位也会原子地清除。PLIC 可以在任何时候执行认领，认领操作不受优先级阈值寄存器设置的影响。
+
+> It is always legal for a hart to perform a claim even if the EIP is not set. In particular, a hart could set the threshold value to maximum to disable interrupt notifications and instead poll for active interrupts using periodic claim requests, though a simpler approach to implement polling would be to clear the external interrupt enable in the corresponding xie register for privilege mode x. The PLIC can perform an interrupt claim by reading the claim/complete register, which returns the ID of the highest priority pending interrupt or zero if there is no pending interrupt. A successful claim will also atomically clear the corresponding pending bit on the interrupt source. The PLIC can perform a claim at any time and the claim operation is not affected by the setting of the priority threshold register.
+
+中断认领处理寄存器是基于上下文的，从偏移量 0x200000 开始并位于 `(4K 对齐 + 4)`。
+
+> The Interrupt Claim Process register is context based and is located at (4K alignment + 4) starts from offset 0x200000.
+
+| PLIC 寄存器块名称 | 功能 | 寄存器块大小（字节） | 描述
+|-|-|-|-
+| 中断认领寄存器 | 15872 个上下文的中断认领处理 | 4096*15872=65011712(0x3e00000) 字节 | 这个寄存器用于向每个上下文提供中断 ID
+
+> | PLIC Register Block Name | Function | Register Block Size in Byte | Description
+> |-|-|-|-
+> | Interrupt Claim Register | Interrupt Claim Process for 15872 contexts | 4096*15872=65011712(0x3e00000) bytes | This is the register used to acquire interrupt ID for each context
+
+### PLIC 中断认领处理内存映射
+
+> PLIC Interrupt Claim Process Memory Map
+
+```plaintext
+0x200004: 处理上下文 0 的中断认领
+0x201004: 处理上下文 1 的中断认领
+0x202004: 处理上下文 2 的中断认领
+0x203004: 处理上下文 3 的中断认领
+...
+...
+...
+0x3FFF004: 处理上下文 15871 的中断认领
+```
+
+> ```plaintext
+> 0x200004: Interrupt Claim Process for context 0
+> 0x201004: Interrupt Claim Process for context 1
+> 0x202004: Interrupt Claim Process for context 2
+> 0x203004: Interrupt Claim Process for context 3
+> ...
+> ...
+> ...
+> 0x3FFF004: Interrupt Claim Process for context 15871
+> ```
+
+## 第九章 中断完成
+
+> Chapter 9. Interrupt Completion
+
+PLIC 通过将认领时收到的中断 ID 写入认领/完成寄存器，表明其已完成中断处理程序的执行。PLIC 并不检查完成 ID 是否与该目标的最后一个认领 ID 相同。如果完成 ID 与当前为目标启用的中断源不匹配，则完成将被静默地忽略。
+
+> The PLIC signals it has completed executing an interrupt handler by writing the interrupt ID it received from the claim to the claim/complete register. The PLIC does not check whether the completion ID is the same as the last claim ID for that target. If the completion ID does not match an interrupt source that is currently enabled for the target, the completion is silently ignored.
+
+在处理程序完成对中断的服务后，必须向相关的门控发送中断完成信息，通常是以写到非空闲内存映射的 I/O 控制寄存器的方式。门控只有在收到该完成消息后才会将其他中断转发给 PLIC 核芯。
+
+> After a handler has completed service of an interrupt, the associated gateway must be sent a interrupt completion message, usually as a write to a non-idempotent memory-mapped I/O contro register. The gateway will only forward additional interrupts to the PLIC core after receiving th completion message.
+
+中断完成寄存器是基于上下文的，与中断认领处理寄存器位于同一地址，即从偏移量 0x200000 开始的（4K 对齐 + 4）。
+
+> The Interrupt Completion registers are context based and located at the same address with Interrupt Claim Process register, which is at (4K alignment + 4) starts from offset 0x200000.
+
+| PLIC 寄存器块名称 | 功能 | 寄存器块大小（字节） | 描述
+|-|-|-|-
+| 中断完成寄存器 | 15872 个上下文的中断完成 | 4096*15872=65011712(0x3e00000) 字节 | 写入这个寄存器以完成中断处理
+
+> | PLIC Register Block Name | Function | Register Block Size in Byte | Description
+> |-|-|-|-
+> | Interrupt Completion Register | Interrupt Completion for 15872 contexts | 4096*15872=65011712(0x3e00000) bytes | This is register to write to complete Interrupt process
+
+### PLIC 中断完成内存映射
+
+> PLIC Interrupt Completion Memory Map
+
+```plaintext
+0x200004: 上下文 0 中断完成
+0x201004: 上下文 1 中断完成
+0x202004: 上下文 2 中断完成
+0x203004: 上下文 3 中断完成
+...
+...
+...
+0x3FFF004: 上下文 15871 中断完成
+```
+
+```plaintext
+0x200004: Interrupt Completion for context 0
+0x201004: Interrupt Completion for context 1
+0x202004: Interrupt Completion for context 2
+0x203004: Interrupt Completion for context 3
+...
+...
+...
+0x3FFF004: Interrupt Completion for context 15871
+```
