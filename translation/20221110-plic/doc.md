@@ -4,6 +4,8 @@
 
 > [原文](https://github.com/riscv/riscv-plic-spec/releases/tag/1.0.0_rc5)
 
+> 译者注：这规范写的什么玩意啊，真的烂。佶屈聱牙，各种词乱往上堆，怀疑不是英语母语者写的，是别的语言写完机翻英语。
+
 ## 第一章 引言
 
 > Chapter 1. Introduction
@@ -300,11 +302,11 @@ PLIC 内存映射区域内中断源优先级块在基址固定为 0x000000。
 
 | PLIC 寄存器块名称 | 功能 | 寄存器块大小（字节） | 描述
 |-|-|-|-
-| 中断源优先级 | #0 到 #1023 号中断源的优先级 | 1024*4=4096(0x1000) 字节 | 这是一个连续的内存块，包含 PLIC 中断源优先级。<br>该内存块中共有 1024 个中断源优先级，中断源优先级 #0 被保留，换句话说，不存在。
+| 中断源优先级 | 中断源 #0 到 #1023 的优先级 | 1024*4=4096(0x1000) 字节 | 这是一个连续的内存块，包含 PLIC 中断源优先级。该内存块中共有 1024 个中断源优先级，中断源优先级 #0 被保留，换句话说，不存在。
 
 > | PLIC Register Block Name | Function | Register Block Size in Byte | Description
 > |-|-|-|-
-> | Interrupt Source Priority | Interrupt Source Priority #0 to #1023 | 1024*4=4096(0x1000) bytes | This is a continuously memory block which contains PLIC Interrupt Source Priority.<br>Total 1024 Interrupt Source Priority in this memory block. Interrupt Source Priority #0 is reserved which indicates it does not exist.
+> | Interrupt Source Priority | Interrupt Source Priority #0 to #1023 | 1024*4=4096(0x1000) bytes | This is a continuously memory block which contains PLIC Interrupt Source Priority. Total 1024 Interrupt Source Priority in this memory block. Interrupt Source Priority #0 is reserved which indicates it does not exist.
 
 ### PLIC 中断源优先级内存映射
 
@@ -324,4 +326,118 @@ PLIC 内存映射区域内中断源优先级块在基址固定为 0x000000。
 > 0x000008: Interrupt source 2 priority
 > ...
 > 0x000FFC: Interrupt source 1023 priority
+> ```
+
+## 第五章 中断挂起位
+
+> Chapter 5. Interrupt Pending Bits
+
+PLIC 核芯中的中断源挂起位的当前状态组织为 32 位寄存器，可以从挂起数组中读取。中断 ID N 的挂起位存储在字 `(N/32)` 的位 `(N mod 32)`。字 0 的第 0 位代表不存在的中断源 0，被硬连接为 0。
+
+> The current status of the interrupt source pending bits in the PLIC core can be read from the pending array, organized as 32-bit register. The pending bit for interrupt ID N is stored in bit (N mod 32) of word (N/32). Bit 0 of word 0, which represents the non-existent interrupt source 0, is hardwired to zero.
+
+PLIC 核芯中的一个挂起位可以通过设置关联的使能位然后执行声明来清除。
+
+> A pending bit in the PLIC core can be cleared by setting the associated enable bit then performing a claim.
+
+PLIC 内存映射区域内的中断挂起位块的基址固定为 0x001000。
+
+> The base address of Interrupt Pending Bits block within PLIC Memory Map region is fixed at 0x001000.
+
+| PLIC 寄存器块名称 | 功能 | 寄存器块大小（字节） | 描述
+|-|-|-|-
+| 中断挂起位 | 中断源 #0 到 #N 的中断挂起位 | 1024/8=128(0x80) 字节 | 这是一个连续的内存块，包含 PLIC 中断挂起位。每个中断挂起位占用寄存器块中的 1 位。
+
+> | PLIC Register Block Name | Function | Register Block Size in Byte | Description
+> |-|-|-|-
+> | Interrupt Pending Bits | Interrupt Pending Bit of Interrupt Source #0 to #N | 1024/8=128(0x80) bytes | This is a continuously memory block contains PLIC Interrupt Pending Bits. Each Interrupt Pending Bit occupies 1-bit from this register block.
+
+### PLIC 中断挂起位内存映射
+
+> PLIC Interrupt Pending Bits Memory Map
+
+```plaintext
+0x001000: 中断源 #0 到 #31 的挂起位
+...
+0x00107C: 中断源 #992 到 #1023 的挂起位
+```
+
+> ```plaintext
+> 0x001000: Interrupt Source #0 to #31 Pending Bits
+> ...
+> 0x00107C: Interrupt Source #992 to #1023 Pending Bits
+> ```
+
+## 第六章 中断使能
+
+> Chapter 6. Interrupt Enables
+
+每个全局中断都可以通过设置使能寄存器中的相应位来使能。使能寄存器作为 32 位寄存器的连续数组访问，其打包方式与挂起位相同。使能寄存器 0 的第 0 位代表不存在的中断 ID 0，并被硬连线到 0。PLIC 为所有上下文提供了 15872 个中断使能块。
+
+> Each global interrupt can be enabled by setting the corresponding bit in the enables register. The enables registers are accessed as a contiguous array of 32-bit registers, packed the same way as the pending bits. Bit 0 of enable register 0 represents the non-existent interrupt ID 0 and is hardwired to 0. PLIC has 15872 Interrupt Enable blocks for the contexts.
+
+PLIC 如何为上下文（硬件线程和权限级别）组织中断超出了 RISC-V PLIC 规范的范围，但是它必须在供应商的 PLIC 规范中写明。
+
+> How PLIC organizes interrupts for the contexts (Hart and privilege mode) is out of RISC-V PLIC specification scope, however it must be spec-out in vendor’s PLIC specification.
+
+（在某些中断源只能被路由到一个目标子集的情况下，大量的潜在 IE 位可能被硬连线到 0。对于具有固定中断路由的嵌入式设备，更多的位可能被连线到 1。中断优先级、阈值和硬件线程内部中断请求为忽略外部中断提供了相当大的灵活性，即使始终使能全局中断也是如此。）
+
+> (A large number of potential IE bits might be hardwired to zero in cases where some interrupt sources an only be routed to a subset of targets. A larger number of bits might be wired to 1 for an embedded evice with fixed interrupt routing. Interrupt priorities, thresholds, and hart-internal interrupt asking provide considerable flexibility in ignoring external interrupts even if a global interrupt ource is always enabled.)
+
+PLIC 内存映射区域内的中断使能位块的基址固定为 0x002000。
+
+> The base address of Interrupt Enable Bits block within PLIC Memory Map region is fixed at 0x002000.
+
+| PLIC 寄存器块名称 | 功能 | 寄存器块大小（字节） | 描述
+|-|-|-|-
+| 中断使能位 | 中断源 #0 到 #1023 指向 15872 个上下文的中断使能位 | (1024/8)*15872=2031616(0x1f0000) 字节 | 这是一个连续的内存块，包含 15872 个上下文的 PLIC 中断使能位。每个中断使能位占用寄存器块中的 1 位，一共 15872 个中断使能位块
+
+> | PLIC Register Block Name | Function | Register Block Size in Byte | Description
+> |-|-|-|-
+> | Interrupt Enable Bits | Interrupt Enable Bit of Interrupt Source #0 to #1023 for 15872 contexts | (1024/8)*15872=2031616(0x1f0000) bytes | This is a continuously memory block contains PLIC Interrupt Enable Bits of 15872 contexts. Each Interrupt Enable Bit occupies 1-bit from this register block and total 15872 Interrupt Enable Bit blocks PLIC Interrupt Enable Bits Memory Map
+
+### PLIC 中断使能位内存映射
+
+> PLIC Interrupt Enable Bits Memory Map
+
+```plaintext
+0x002000: 上下文 0 上中断源 #0 到 #31 的使能位
+...
+0x00207C: 上下文 0 上中断源 #992 到 #1023 的使能位
+0x002080: 上下文 1 上中断源 #0 到 #31 的使能位
+...
+0x0020FC: 上下文 1 上中断源 #992 到 #1023 的使能位
+0x002100: 上下文 2 上中断源 #0 到 #31 的使能位
+...
+0x00217C: 上下文 2 上中断源 #992 到 #1023 的使能位
+0x002180: 上下文 3 上中断源 #0 到 #31 的使能位
+...
+0x0021FC: 上下文 3 上中断源 #992 到 #1023 的使能位
+...
+...
+...
+0x1F1F80: 上下文 15871 上中断源 #0 到 #31 的使能位
+...
+0x1F1FFC: 上下文 15871 上中断源 #992 到 #1023 的使能位
+```
+
+> ```plaintext
+> 0x002000: Interrupt Source #0 to #31 Enable Bits on context 0
+> ...
+> 0x00207C: Interrupt Source #992 to #1023 Enable Bits on context 0
+> 0x002080: Interrupt Source #0 to #31 Enable Bits on context 1
+> ...
+> 0x0020FC: Interrupt Source #992 to #1023 Enable Bits on context 1
+> 0x002100: Interrupt Source #0 to #31 Enable Bits on context 2
+> ...
+> 0x00217C: Interrupt Source #992 to #1023 Enable Bits on context 2
+> 0x002180: Interrupt Source #0 to #31 Enable Bits on context 3
+> ...
+> 0x0021FC: Interrupt Source #992 to #1023 Enable Bits on context 3
+> ...
+> ...
+> ...
+> 0x1F1F80: Interrupt Source #0 to #31 on context 15871
+> ...
+> 0x1F1FFC: Interrupt Source #992 to #1023 on context 15871
 > ```
