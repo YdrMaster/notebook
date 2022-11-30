@@ -14,3 +14,5 @@
 - 20221108-[RISC-V 高级核内中断器规范](/translation/20221108-aclint.md)
 - 20221110-[RISC-V 平台级中断控制器规范](/translation/20221110-plic/doc.md)
 - 20221115-[Binutil 里的 RISC-V 指令格式](/translation/20221115-insn.md)
+- 20221116-[“Smclic”核内中断控制器（CLIC）RISC-V 特权架构扩展](/translation/20221116-clic.md)
+- 20221129-[链接器脚本](/translation/20221129-linker-script.md)
