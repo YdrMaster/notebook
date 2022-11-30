@@ -231,7 +231,7 @@ INPUT 命令指示链接器将命名的文件包括在链接中，就像它们�
 
 > The INPUT command directs the linker to include the named files in the link, as though they were named on the command line.
 
-例如，如果你每次做链接时都想包括 subr.o，但你又懒得把它放在每个链接命令行上，那么你可以在链接器脚本中加上 INPUT(subr.o)。
+例如，如果你每次做链接时都想包括 subr.o，但你又懒得把它放在 每个链接命令行上，那么你可以在链接器脚本中加上 INPUT(subr.o)。
 
 > For example, if you always want to include subr.o any time you do a link, but you can’t be bothered to put it on every link command line, then you can put ‘INPUT (subr.o)’ in your linker script.
 
@@ -911,9 +911,9 @@ SECTIONS
 > If you do not use a SECTIONS command in your linker script, the linker will place each input section into an identically named output section in the order that the sections are first encountered in the input files. If all input sections are present in the first file, for example, the order of sections in the output file will match the order in the first input file. The first section will be at address zero.
 
 - [输出段描述](#361-输出段描述)
-- [输出段名称]()
-- [输出段地址]()
-- [输入段描述]()
+- [输出段名称](#362-输出段名称)
+- [输出段地址](#363-输出段地址)
+- [输入段描述](#364-输入段描述)
 - [输出段数据]()
 - [输出段关键字]()
 - [输出段丢弃]()
@@ -964,7 +964,7 @@ section [address] [(type)] :
 > Each output-section-command may be one of the following:
 
 - 符号赋值（参见[为符号赋值](#35-为符号赋值)）
-- 一个输入段描述（见[输入段描述]()）
+- 一个输入段描述（见[输入段描述](#364-输入段描述)）
 - 直接包括的数据值（见[输出段数据]()）
 - 一个特殊的输出段关键字（见[输出段关键字]()）。
 
@@ -972,3 +972,243 @@ section [address] [(type)] :
 > - an input section description (see Input Section Description)
 > - data values to include directly (see Output Section Data)
 > - a special output section keyword (see Output Section Keywords)
+
+### 3.6.2 输出段名称
+
+> 3.6.2 Output Section Name
+
+输出段的名称是 *section*。*section* 必须符合你的输出格式的限制。在只支持有限数量的段的格式中，比如 a.out，名称必须是格式所支持的名称之一（比如a.out，只允许 *.text*、*.data* 或 *.bss*）。如果输出格式支持任何数量的段，但使用数字而不是名称（如 Oasys），那么名称应该以带引号的数字字符串提供。一个段的名称可以由任何字符序列组成，但包含任何不寻常字符的名称，如逗号，必须加引号。
+
+> The name of the output section is section. section must meet the constraints of your output format. In formats which only support a limited number of sections, such as a.out, the name must be one of the names supported by the format (a.out, for example, allows only ‘.text’, ‘.data’ or ‘.bss’). If the output format supports any number of sections, but with numbers and not names (as is the case for Oasys), the name should be supplied as a quoted numeric string. A section name may consist of any sequence of characters, but a name which contains any unusual characters such as commas must be quoted.
+
+输出段的名称 */DISCARD/* 是特殊的；（表示）输出段丢弃。
+
+> The output section name ‘/DISCARD/’ is special; Output Section Discarding.
+
+### 3.6.3 输出段地址
+
+> 3.6.3 Output Section Address
+
+该地址是输出段的 VMA（虚拟内存地址）的表达式。这个地址是可选的，但是如果它存在，那么输出地址将被精确地设置为指定的地址。
+
+> The address is an expression for the VMA (the virtual memory address) of the output section. This address is optional, but if it is provided then the output address will be set exactly as specified.
+
+如果没有指定输出地址，那么将根据下面的启发式方法，为该部分选择一个地址。这个地址将被调整以适应输出段的对齐要求。对齐要求是指输出段所包含的任何输入段的最严格对齐。
+
+> If the output address is not specified then one will be chosen for the section, based on the heuristic below. This address will be adjusted to fit the alignment requirement of the output section. The alignment requirement is the strictest alignment of any input section contained within the output section.
+
+输出段的地址启发法如下：
+
+> The output section address heuristic is as follows:
+
+如果为该段设置了一个输出内存区域，那么它将被添加到该区域，其地址将是该区域的下一个空闲地址。
+
+> If an output memory region is set for the section then it is added to this region and its address will be the next free address in that region.
+
+如果 MEMORY 命令被用来创建一个内存区域的列表，那么会选择第一个与段的属性兼容的区域来包含它。该段的输出地址将是该区域的下一个空闲地址；[MEMORY 命令]()。
+
+> If the MEMORY command has been used to create a list of memory regions then the first region which has attributes compatible with the section is selected to contain it. The section’s output address will be the next free address in that region; MEMORY Command.
+
+如果没有指定内存区域，或者没有与该部分相匹配的内存区域，那么输出地址将基于位置计数器的当前值。
+
+> If no memory regions were specified, or none match the section then the output address will be based on the current value of the location counter.
+
+比如说：
+
+> For example:
+
+```ld
+.text . : { *(.text) }
+```
+
+和
+
+> and
+
+```ld
+.text : { *(.text) }
+```
+
+是有细微差别的。第一个将把 *.text* 输出段的地址设置为位置计数器的当前值。第二种将把它设置为位置计数器的当前值，并对齐到所有 *.text* 输入段的最严格对齐。
+
+> are subtly different. The first will set the address of the ‘.text’ output section to the current value of the location counter. The second will set it to the current value of the location counter aligned to the strictest alignment of any of the ‘.text’ input sections.
+
+该地址可以是一个任意的表达式；[链接器脚本中的表达式]()。例如，如果你想在 0x10 字节的边界上对齐该段，使该段地址的最低 4 位为 0，你可以这样做：
+
+> The address may be an arbitrary expression; Expressions in Linker Scripts. For example, if you want to align the section on a 0x10 byte boundary, so that the lowest four bits of the section address are zero, you could do something like this:
+
+```ld
+.text ALIGN(0x10) : { *(.text) }
+```
+
+这是有效的，原因是 ALIGN 返回当前位置的计数器，并向上对齐到指定的值。
+
+> This works because ALIGN returns the current location counter aligned upward to the specified value.
+
+为一个区段指定地址将改变位置计数器的值，只要该区段不是空的（空的区段会被忽略）。
+
+> Specifying address for a section will change the value of the location counter, provided that the section is non-empty. (Empty sections are ignored).
+
+### 3.6.4 输入段描述
+
+> 3.6.4 Input Section Description
+
+最常见的输出命令段是输入段描述。
+
+> The most common output section command is an input section description.
+
+输入段描述是最基本的链接器脚本操作。你用输出段来告诉链接器如何在内存中布局你的程序。你使用输入部分描述来告诉链接器如何将输入文件映射到你的内存布局中。
+
+> The input section description is the most basic linker script operation. You use output sections to tell the linker how to lay out your program in memory. You use input section descriptions to tell the linker how to map the input files into your memory layout.
+
+- [输入段基础知识](#3641-输入段基础知识)
+- [输入段通配符模式]()
+- [常见符号的输入段]()
+- [输入段和垃圾收集]()
+- [输入段示例]()
+
+> - Input Section Basics
+> - Input Section Wildcard Patterns
+> - Input Section for Common Symbols
+> - Input Section and Garbage Collection
+> - Input Section Example
+
+#### 3.6.4.1 输入段基础知识
+
+> 3.6.4.1 Input Section Basics
+
+一个输入段的描述由一个文件名组成，并可选后缀一个段名列表，用括号括起。
+
+> An input section description consists of a file name optionally followed by a list of section names in parentheses.
+
+文件名和段名可以是通配符模式，我们将在下面进一步描述（见[输入段通配符模式]()）。
+
+> The file name and the section name may be wildcard patterns, which we describe further below (see Input Section Wildcard Patterns).
+
+最常见的输入段描述是在输出段包括所有具有特定名称的输入段。例如，要包括所有输入的 *.text* 段，你可以这样写：
+
+> The most common input section description is to include all input sections with a particular name in the output section. For example, to include all input ‘.text’ sections, you would write:
+
+```ld
+*(.text)
+```
+
+这里的 `*` 是一个通配符，可以匹配任何文件名。要排除一个与文件名通配符匹配的文件列表，可以使用 EXCLUDE_FILE 来匹配除 EXCLUDE_FILE 列表中指定的文件以外的所有文件。例如：
+
+> Here the ‘*’ is a wildcard which matches any file name. To exclude a list of files from matching the file name wildcard, EXCLUDE_FILE may be used to match all files except the ones specified in the EXCLUDE_FILE list. For example:
+
+```ld
+EXCLUDE_FILE (*crtend.o *otherfile.o) *(.ctors)
+```
+
+将导致除 crtend.o 和 otherfile.o 之外的所有文件的 *.ctors* 段都被包括在内。EXCLUDE_FILE 也可以放在段列表里面，例如：
+
+> will cause all .ctors sections from all files except crtend.o and otherfile.o to be included. The EXCLUDE_FILE can also be placed inside the section list, for example:
+
+```ld
+*(EXCLUDE_FILE (*crtend.o *otherfile.o) .ctors)
+```
+
+这样做的结果与前面的例子相同。如果段列表包含多个段，支持 EXCLUDE_FILE 的两种语法是很有用的，如下所述。
+
+> The result of this is identically to the previous example. Supporting two syntaxes for EXCLUDE_FILE is useful if the section list contains more than one section, as described below.
+
+有两种方法可以包括多于一个部分。
+
+> There are two ways to include more than one section:
+
+```ld
+*(.text .rdata)
+*(.text) *(.rdata)
+```
+
+这两者之间的区别在于 *.text* 和 *.rdata* 输入段在输出段出现的顺序。在第一个例子中，它们将被混合在一起，以它们在链接器输入中的相同顺序出现。在第二个例子中，所有 *.text* 输入段将先出现，然后是所有 *.rdata* 输入段。
+
+> The difference between these is the order in which the ‘.text’ and ‘.rdata’ input sections will appear in the output section. In the first example, they will be intermingled, appearing in the same order as they are found in the linker input. In the second example, all ‘.text’ input sections will appear first, followed by all ‘.rdata’ input sections.
+
+当使用 EXCLUDE_FILE 时，有一个以上的段，如果排除在段列表中，那么排除只适用于紧接着的部分，例如：
+
+> When using EXCLUDE_FILE with more than one section, if the exclusion is within the section list then the exclusion only applies to the immediately following section, for example:
+
+```ld
+*(EXCLUDE_FILE (*somefile.o) .text .rdata)
+```
+
+将导致除 somefile.o 以外的所有文件中的所有 *.text* 部分被包括在内，而所有文件中的所有 *.rdata* 部分，包括 somefile.o，都将被包括在内。为了排除somefile.o 中的 *.rdata* 部分，这个例子可以修改为：
+
+> will cause all ‘.text’ sections from all files except somefile.o to be included, while all ‘.rdata’ sections from all files, including somefile.o, will be included. To exclude the ‘.rdata’ sections from somefile.o the example could be modified to:
+
+```ld
+*(EXCLUDE_FILE (*somefile.o) .text EXCLUDE_FILE (*somefile.o) .rdata)
+```
+
+另外，把 EXCLUDE_FILE 放在段列表之外，在输入文件选择之前，会导致排除适用于所有段。因此，前面的例子可以改写为：
+
+> Alternatively, placing the EXCLUDE_FILE outside of the section list, before the input file selection, will cause the exclusion to apply for all sections. Thus the previous example can be rewritten as:
+
+```ld
+EXCLUDE_FILE (*somefile.o) *(.text .rdata)
+```
+
+你可以指定一个文件名来包括某个特定文件的段。如果你的一个或多个文件包含需要在内存中某个特定位置的特殊数据，你会这样做。例如：
+
+> You can specify a file name to include sections from a particular file. You would do this if one or more of your files contain special data that needs to be at a particular location in memory. For example:
+
+```ld
+data.o(.data)
+```
+
+为了根据输入段的段标记细化被包含的段，可以使用 INPUT_SECTION_FLAGS。
+
+> To refine the sections that are included based on the section flags of an input section, INPUT_SECTION_FLAGS may be used.
+
+下面是一个为 ELF 段使用段头标记的简单例子：
+
+> Here is a simple example for using Section header flags for ELF sections:
+
+```ld
+SECTIONS {
+  .text : { INPUT_SECTION_FLAGS (SHF_MERGE & SHF_STRINGS) *(.text) }
+  .text2 : { INPUT_SECTION_FLAGS (!SHF_WRITE) *(.text) }
+}
+```
+
+在这个例子中，输出段 *.text* 将由任何与名称 *\*(.text)* 相匹配的输入段组成，为其设置了 SHF_MERGE 和 SHF_STRINGS 段头标记。输出段 *.text2* 将由任何与名称 *\*(.text)* 相匹配的输入段组成，不带段头标记 SHF_WRITE。
+
+> In this example, the output section ‘.text’ will be comprised of any input section matching the name *(.text) whose section header flags SHF_MERGE and SHF_STRINGS are set. The output section ‘.text2’ will be comprised of any input section matching the name*(.text) whose section header flag SHF_WRITE is clear.
+
+你也可以通过写一个与档案匹配的模式，冒号，然后写与文件匹配的模式，冒号周围没有空白，来指定档案中的文件。
+
+You can also specify files within archives by writing a pattern matching the archive, a colon, then the pattern matching the file, with no whitespace around the colon.
+
+‘archive:file’
+matches file within archive
+
+‘archive:’
+matches the whole archive
+
+‘:file’
+matches file but not one in an archive
+
+'archive:file'
+匹配档案中的文件
+
+归档:'
+匹配整个归档文件
+
+':file'
+匹配文件，但不匹配档案中的一个文件
+
+archive "和 "file "中的任何一个或两个都可以包含shell通配符。在基于DOS的文件系统中，链接器会认为单个字母后面的冒号是一个驱动器指定符，所以'c:myfile.o'是一个简单的文件规格，而不是在名为'c'的档案中的'myfile.o'。archive:file'文件规格也可以在EXCLUDE_FILE列表中使用，但不能出现在其他链接器脚本的上下文中。例如，你不能通过在 INPUT 命令中使用'archive:file'从档案中提取一个文件。
+
+Either one or both of ‘archive’ and ‘file’ can contain shell wildcards. On DOS based file systems, the linker will assume that a single letter followed by a colon is a drive specifier, so ‘c:myfile.o’ is a simple file specification, not ‘myfile.o’ within an archive called ‘c’. ‘archive:file’ filespecs may also be used within an EXCLUDE_FILE list, but may not appear in other linker script contexts. For instance, you cannot extract a file from an archive by using ‘archive:file’ in an INPUT command.
+
+如果你使用一个没有章节列表的文件名，那么输入文件中的所有章节都将包括在输出章节中。这种做法并不常见，但在某些情况下可能很有用。比如说
+
+If you use a file name without a list of sections, then all sections in the input file will be included in the output section. This is not commonly done, but it may by useful on occasion. For example:
+
+data.o
+
+当你使用的文件名不是 "archive:file "指定符，也不包含任何通配符时，链接器将首先查看你是否在链接器命令行或INPUT命令中也指定了该文件名。如果没有，链接器将尝试把该文件作为一个输入文件打开，就像它出现在命令行上一样。注意，这与INPUT命令不同，因为链接器不会在归档搜索路径中搜索该文件。
+
+When you use a file name which is not an ‘archive:file’ specifier and does not contain any wild card characters, the linker will first see if you also specified the file name on the linker command line or in an INPUT command. If you did not, the linker will attempt to open the file as an input file, as though it appeared on the command line. Note that this differs from an INPUT command, because the linker will not search for the file in the archive search path.
