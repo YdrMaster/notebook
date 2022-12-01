@@ -141,7 +141,7 @@ SECTIONS
 
 第二行定义了一个输出段，`.text`。冒号是必要的语法，现在可以忽略。在输出段名称后面的大括号内，你列出了应该被放入这个输出段的输入段的名称。`*` 是一个通配符，可以匹配任何文件名。表达式 `*(.text)` 意味着所有输入文件中的所有 `.text` 输入段。
 
-> The second line defines an output section, ‘.text’. The colon is required syntax which may be ignored for now. Within the curly braces after the output section name, you list the names of the input sections which should be placed into this output section. The ‘*’ is a wildcard which matches any file name. The expression ‘*(.text)’ means all ‘.text’ input sections in all input files.
+> The second line defines an output section, ‘.text’. The colon is required syntax which may be ignored for now. Within the curly braces after the output section name, you list the names of the input sections which should be placed into this output section. The ‘\*’ is a wildcard which matches any file name. The expression ‘\*(.text)’ means all ‘.text’ input sections in all input files.
 
 由于定义输出段 `.text` 时位置计数器是 `0x10000`，链接器将把输出文件中 `.text` 段的地址设为 `0x10000`。
 
@@ -533,13 +533,13 @@ PROVIDE (__stack_size = 0x100);
 
 #### FORCE_COMMON_ALLOCATION
 
-这条命令与 `-d` 命令行选项的效果相同：即使指定了可重定位的输出文件（`-r`），也要让 ld 将空间分配给普通符号。
+这条命令与 `-d` 命令行选项的效果相同：即使指定了可重定位的输出文件（`-r`），也要让 ld 将空间分配给公共符号。
 
 > This command has the same effect as the ‘-d’ command-line option: to make ld assign space to common symbols even if a relocatable output file is specified (‘-r’).
 
 #### INHIBIT_COMMON_ALLOCATION
 
-这个命令与 `--no-define-common` 命令行选项的效果相同：即使是对不可重定位的输出文件，也禁止 ld 将空间分配给普通符号。
+这个命令与 `--no-define-common` 命令行选项的效果相同：即使是对不可重定位的输出文件，也禁止 ld 将空间分配给公共符号。
 
 > This command has the same effect as the ‘--no-define-common’ command-line option: to make ld omit the assignment of addresses to common symbols even for a non-relocatable output file.
 
@@ -747,7 +747,7 @@ SECTIONS
 
 > In this example, if the program defines ‘_etext’ (with a leading underscore), the linker will give a multiple definition diagnostic. If, on the other hand, the program defines ‘etext’ (with no leading underscore), the linker will silently use the definition in the program. If the program references ‘etext’ but does not define it, the linker will use the definition in the linker script.
 
-注意 - PROVIDE 直接认为每个普通的符号是已定义的，即使这样的符号可以与 PROVIDE 将创建的符号相结合。在考虑构造函数和析构函数列表符号时，这一点特别重要，例如 `__CTOR_LIST__`，因为这些符号经常被定义为普通符号。
+注意 - PROVIDE 直接认为所有公共符号是已定义的，即使这样的符号可以与 PROVIDE 将创建的符号相结合。在考虑构造函数和析构函数列表符号时，这一点特别重要，例如 `__CTOR_LIST__`，因为这些符号经常被定义为公共符号。
 
 > Note - the PROVIDE directive considers a common symbol to be defined, even though such a symbol could be combined with the symbol that the PROVIDE would create. This is particularly important when considering constructor and destructor list symbols such as ‘__CTOR_LIST__’ as these are often defined as common symbols.
 
@@ -914,8 +914,8 @@ SECTIONS
 - [输出段名称](#362-输出段名称)
 - [输出段地址](#363-输出段地址)
 - [输入段描述](#364-输入段描述)
-- [输出段数据]()
-- [输出段关键字]()
+- [输出段数据](#365-输出段数据)
+- [输出段关键字](#366-输出段关键字)
 - [输出段丢弃]()
 - [输出段属性]()
 - [叠加描述]()
@@ -965,7 +965,7 @@ section [address] [(type)] :
 
 - 符号赋值（参见[为符号赋值](#35-为符号赋值)）
 - 一个输入段描述（见[输入段描述](#364-输入段描述)）
-- 直接包括的数据值（见[输出段数据]()）
+- 直接包括的数据值（见[输出段数据](#365-输出段数据)）
 - 一个特殊的输出段关键字（见[输出段关键字]()）。
 
 > - a symbol assignment (see Assigning Values to Symbols)
@@ -1062,10 +1062,10 @@ section [address] [(type)] :
 > The input section description is the most basic linker script operation. You use output sections to tell the linker how to lay out your program in memory. You use input section descriptions to tell the linker how to map the input files into your memory layout.
 
 - [输入段基础知识](#3641-输入段基础知识)
-- [输入段通配符模式]()
-- [常见符号的输入段]()
-- [输入段和垃圾收集]()
-- [输入段示例]()
+- [输入段通配符模式](#3642-输入段通配符模式)
+- [常见符号的输入段](#3643-公共符号的输入段)
+- [输入段和垃圾收集](#3644-输入段和垃圾收集)
+- [输入段示例](#3645-输入段示例)
 
 > - Input Section Basics
 > - Input Section Wildcard Patterns
@@ -1081,7 +1081,7 @@ section [address] [(type)] :
 
 > An input section description consists of a file name optionally followed by a list of section names in parentheses.
 
-文件名和段名可以是通配符模式，我们将在下面进一步描述（见[输入段通配符模式]()）。
+文件名和段名可以是通配符模式，我们将在下面进一步描述（见[输入段通配符模式](#3642-输入段通配符模式)）。
 
 > The file name and the section name may be wildcard patterns, which we describe further below (see Input Section Wildcard Patterns).
 
@@ -1095,7 +1095,7 @@ section [address] [(type)] :
 
 这里的 `*` 是一个通配符，可以匹配任何文件名。要排除一个与文件名通配符匹配的文件列表，可以使用 EXCLUDE_FILE 来匹配除 EXCLUDE_FILE 列表中指定的文件以外的所有文件。例如：
 
-> Here the ‘*’ is a wildcard which matches any file name. To exclude a list of files from matching the file name wildcard, EXCLUDE_FILE may be used to match all files except the ones specified in the EXCLUDE_FILE list. For example:
+> Here the ‘\*’ is a wildcard which matches any file name. To exclude a list of files from matching the file name wildcard, EXCLUDE_FILE may be used to match all files except the ones specified in the EXCLUDE_FILE list. For example:
 
 ```ld
 EXCLUDE_FILE (*crtend.o *otherfile.o) *(.ctors)
@@ -1175,40 +1175,324 @@ SECTIONS {
 
 在这个例子中，输出段 *.text* 将由任何与名称 *\*(.text)* 相匹配的输入段组成，为其设置了 SHF_MERGE 和 SHF_STRINGS 段头标记。输出段 *.text2* 将由任何与名称 *\*(.text)* 相匹配的输入段组成，不带段头标记 SHF_WRITE。
 
-> In this example, the output section ‘.text’ will be comprised of any input section matching the name *(.text) whose section header flags SHF_MERGE and SHF_STRINGS are set. The output section ‘.text2’ will be comprised of any input section matching the name*(.text) whose section header flag SHF_WRITE is clear.
+> In this example, the output section ‘.text’ will be comprised of any input section matching the name \*(.text) whose section header flags SHF_MERGE and SHF_STRINGS are set. The output section ‘.text2’ will be comprised of any input section matching the name \*(.text) whose section header flag SHF_WRITE is clear.
 
-你也可以通过写一个与档案匹配的模式，冒号，然后写与文件匹配的模式，冒号周围没有空白，来指定档案中的文件。
+> You can also specify files within archives by writing a pattern matching the archive, a colon, then the pattern matching the file, with no whitespace around the colon.
+>
+> ‘archive:file’
+> matches file within archive
+>
+> ‘archive:’
+> matches the whole archive
+>
+> ‘:file’
+> matches file but not one in an archive
+>
+> Either one or both of ‘archive’ and ‘file’ can contain shell wildcards. On DOS based file systems, the linker will assume that a single letter followed by a colon is a drive specifier, so ‘c:myfile.o’ is a simple file specification, not ‘myfile.o’ within an archive called ‘c’. ‘archive:file’ filespecs may also be used within an EXCLUDE_FILE list, but may not appear in other linker script contexts. For instance, you cannot extract a file from an archive by using ‘archive:file’ in an INPUT command.
+>
+> If you use a file name without a list of sections, then all sections in the input file will be included in the output section. This is not commonly done, but it may by useful on occasion. For example:
+>
+> data.o
+> When you use a file name which is not an ‘archive:file’ specifier and does not contain any wild card characters, the linker will first see if you also specified the file name on the linker command line or in an INPUT command. If you did not, the linker will attempt to open the file as an input file, as though it appeared on the command line. Note that this differs from an INPUT command, because the linker will not search for the file in the archive search path.
 
-You can also specify files within archives by writing a pattern matching the archive, a colon, then the pattern matching the file, with no whitespace around the colon.
+#### 3.6.4.2 输入段通配符模式
 
-‘archive:file’
-matches file within archive
+> 3.6.4.2 Input Section Wildcard Patterns
 
-‘archive:’
-matches the whole archive
+在一个输入段的描述中，文件名、段名或二者同时可以是通配符模式。
 
-‘:file’
-matches file but not one in an archive
+> In an input section description, either the file name or the section name or both may be wildcard patterns.
 
-'archive:file'
-匹配档案中的文件
+在许多例子中看到的 `*` 文件名是一个简单的文件名通配符模式。
 
-归档:'
-匹配整个归档文件
+> The file name of ‘\*’ seen in many examples is a simple wildcard pattern for the file name.
 
-':file'
-匹配文件，但不匹配档案中的一个文件
+通配符模式和 Unix shell 使用的模式一样。
 
-archive "和 "file "中的任何一个或两个都可以包含shell通配符。在基于DOS的文件系统中，链接器会认为单个字母后面的冒号是一个驱动器指定符，所以'c:myfile.o'是一个简单的文件规格，而不是在名为'c'的档案中的'myfile.o'。archive:file'文件规格也可以在EXCLUDE_FILE列表中使用，但不能出现在其他链接器脚本的上下文中。例如，你不能通过在 INPUT 命令中使用'archive:file'从档案中提取一个文件。
+> The wildcard patterns are like those used by the Unix shell.
 
-Either one or both of ‘archive’ and ‘file’ can contain shell wildcards. On DOS based file systems, the linker will assume that a single letter followed by a colon is a drive specifier, so ‘c:myfile.o’ is a simple file specification, not ‘myfile.o’ within an archive called ‘c’. ‘archive:file’ filespecs may also be used within an EXCLUDE_FILE list, but may not appear in other linker script contexts. For instance, you cannot extract a file from an archive by using ‘archive:file’ in an INPUT command.
+- `*`
+  匹配任何数量的字符
 
-如果你使用一个没有章节列表的文件名，那么输入文件中的所有章节都将包括在输出章节中。这种做法并不常见，但在某些情况下可能很有用。比如说
+  > matches any number of characters
 
-If you use a file name without a list of sections, then all sections in the input file will be included in the output section. This is not commonly done, but it may by useful on occasion. For example:
+- `?`
+  匹配任何单个字符
 
-data.o
+  > matches any single character
 
-当你使用的文件名不是 "archive:file "指定符，也不包含任何通配符时，链接器将首先查看你是否在链接器命令行或INPUT命令中也指定了该文件名。如果没有，链接器将尝试把该文件作为一个输入文件打开，就像它出现在命令行上一样。注意，这与INPUT命令不同，因为链接器不会在归档搜索路径中搜索该文件。
+- `[chars]`
+  匹配任何一个字符的单个实例；`-` 字符可用于指定一个字符范围，如 `[a-z]` 可匹配任何小写字母
 
-When you use a file name which is not an ‘archive:file’ specifier and does not contain any wild card characters, the linker will first see if you also specified the file name on the linker command line or in an INPUT command. If you did not, the linker will attempt to open the file as an input file, as though it appeared on the command line. Note that this differs from an INPUT command, because the linker will not search for the file in the archive search path.
+  > smatches a single instance of any of the chars; the ‘-’ character may be used to specify a range of characters, as in ‘[a-z]’ to match any lower case letter
+
+- `\`
+  引述后面的字符
+
+  > quotes the following character
+
+文件名通配符模式只匹配在命令行或 INPUT 命令中明确指定的文件。链接器不会搜索目录来扩展通配符。
+
+> File name wildcard patterns only match files which are explicitly specified on the command line or in an INPUT command. The linker does not search directories to expand wildcards.
+
+如果一个文件名与一个以上的通配符模式相匹配，或者一个文件名明确出现并且也同时被通配符模式所匹配，链接器将使用链接器脚本中的第一个匹配。例如，这个输入部分描述的序列可能是错误的，因为 data.o 规则将不会被使用：
+
+> If a file name matches more than one wildcard pattern, or if a file name appears explicitly and is also matched by a wildcard pattern, the linker will use the first match in the linker script. For example, this sequence of input section descriptions is probably in error, because the data.o rule will not be used:
+
+```ld
+.data : { *(.data) }
+.data1 : { data.o(.data) }
+```
+
+通常情况下，链接器会按照链接过程中看到的顺序放置通配符匹配的文件和段。你可以通过使用 SORT_BY_NAME 关键字来改变这一点，该关键字出现在括号中的通配符模式之前（例如，SORT_BY_NAME(.text\*)）。当使用 SORT_BY_NAME 关键字时，链接器将在把文件或段放在输出文件中之前，按名称升序排序。
+
+> Normally, the linker will place files and sections matched by wildcards in the order in which they are seen during the link. You can change this by using the SORT_BY_NAME keyword, which appears before a wildcard pattern in parentheses (e.g., SORT_BY_NAME(.text\*)). When the SORT_BY_NAME keyword is used, the linker will sort the files or sections into ascending order by name before placing them in the output file.
+
+SORT_BY_ALIGNMENT 与 SORT_BY_NAME 类似。SORT_BY_ALIGNMENT 将把各段按对齐降序排序，然后再把它们放在输出文件中。将较大的对齐方式放在较小的对齐方式之前，可以减少需要的填充量。
+
+> SORT_BY_ALIGNMENT is similar to SORT_BY_NAME. SORT_BY_ALIGNMENT will sort sections into descending order of alignment before placing them in the output file. Placing larger alignments before smaller alignments can reduce the amount of padding needed.
+
+SORT_BY_INIT_PRIORITY 也与 SORT_BY_NAME 类似。SORT_BY_INIT_PRIORITY 将把段按段名中编码的 GCC init_priority 属性的数字升序排序，然后再把它们放到输出文件中。在 .init_array.NNNN 和 .fini_array.NNNN 中，NNNN 是 init_priority。在 .ctors.NNNNN 和 .dtors.NNNNN 中，NNNNN 是 65535 减去 init_priority。
+
+> SORT_BY_INIT_PRIORITY is also similar to SORT_BY_NAME. SORT_BY_INIT_PRIORITY will sort sections into ascending numerical order of the GCC init_priority attribute encoded in the section name before placing them in the output file. In .init_array.NNNNN and .fini_array.NNNNN, NNNNN is the init_priority. In .ctors.NNNNN and .dtors.NNNNN, NNNNN is 65535 minus the init_priority.
+
+SORT 是 SORT_BY_NAME 的一个别名。
+
+> SORT is an alias for SORT_BY_NAME.
+
+当链接器脚本中存在嵌套的段排序命令时，最多可以有 1 层嵌套。
+
+> When there are nested section sorting commands in linker script, there can be at most 1 level of nesting for section sorting commands.
+
+1. SORT_BY_NAME (SORT_BY_ALIGNMENT (wildcard section pattern))。它将首先按名称对输入段进行排序，如果两个段有相同的名称，则按对齐排序。
+2. SORT_BY_ALIGNMENT (SORT_BY_NAME (wildcard section pattern))。它将首先按对齐对输入段进行排序，如果两个部分有相同的对齐，则按名称排序。
+3. SORT_BY_NAME (SORT_BY_NAME (wildcard section pattern)) 的处理方法与 SORT_BY_NAME (wildcard section pattern) 相同。
+4. SORT_BY_ALIGNMENT (SORT_BY_ALIGNMENT (wildcard section pattern)) 的处理方法与 SORT_BY_ALIGNMENT (wildcard section pattern) 相同。
+5. 所有其他的段排序命令嵌套都是无效的。
+
+> 1. SORT_BY_NAME (SORT_BY_ALIGNMENT (wildcard section pattern)). It will sort the input sections by name first, then by alignment if two sections have the same name.
+> 2. SORT_BY_ALIGNMENT (SORT_BY_NAME (wildcard section pattern)). It will sort the input sections by alignment first, then by name if two sections have the same alignment.
+> 3. SORT_BY_NAME (SORT_BY_NAME (wildcard section pattern)) is treated the same as SORT_BY_NAME (wildcard section pattern).
+> 4. SORT_BY_ALIGNMENT (SORT_BY_ALIGNMENT (wildcard section pattern)) is treated the same as SORT_BY_ALIGNMENT (wildcard section pattern).
+> 5. All other nested section sorting commands are invalid.
+
+当同时使用命令行段排序选项和链接器脚本段排序命令时，段排序命令总是优先于命令行选项。
+
+> When both command-line section sorting option and linker script section sorting command are used, section sorting command always takes precedence over the command-line option.
+
+如果链接器脚本中的段排序命令没有嵌套，命令行选项将使段排序命令被视为嵌套排序命令。
+
+> If the section sorting command in linker script isn’t nested, the command-line option will make the section sorting command to be treated as nested sorting command.
+
+1. SORT_BY_NAME (wildcard section pattern) 加上 `--sort-sections alignment` 等同于 SORT_BY_NAME (SORT_BY_ALIGNMENT (wildcard section pattern))。
+2. SORT_BY_ALIGNMENT (wildcard section pattern) 加上 `--sort-sections name` 等同于SORT_BY_ALIGNMENT (SORT_BY_NAME (wildcard section pattern))。
+
+> 1. SORT_BY_NAME (wildcard section pattern) with --sort-sections alignment is equivalent to SORT_BY_NAME (SORT_BY_ALIGNMENT (wildcard section pattern)).
+> 2. SORT_BY_ALIGNMENT (wildcard section pattern) with --sort-section name is equivalent to SORT_BY_ALIGNMENT (SORT_BY_NAME (wildcard section pattern)).
+
+如果链接器脚本中的段排序命令是嵌套的，那么命令行选项将被忽略。
+
+> If the section sorting command in linker script is nested, the command-line option will be ignored.
+
+SORT_NONE 通过忽略命令行的段排序选项来禁用段排序。
+
+> SORT_NONE disables section sorting by ignoring the command-line section sorting option.
+
+如果你对输入的段去向感到困惑，可以使用 `-M` 链接器选项来生成一个映射文件。映射文件精确地显示了输入段是如何映射到输出段的。
+
+> If you ever get confused about where input sections are going, use the ‘-M’ linker option to generate a map file. The map file shows precisely how input sections are mapped to output sections.
+
+这个例子显示了如何使用通配符模式来划分文件。这个链接器脚本指示链接器将所有 *.text* 段放在 *.text* 中，所有 *.bss* 段放在 *.bss* 中。链接器将把所有以大写字母开头的文件中的 *.data* 段放在 *.DATA* 中；对于所有其他文件，链接器将把 *.data* 段放在 *.data* 中。
+
+> This example shows how wildcard patterns might be used to partition files. This linker script directs the linker to place all ‘.text’ sections in ‘.text’ and all ‘.bss’ sections in ‘.bss’. The linker will place the ‘.data’ section from all files beginning with an upper case character in ‘.DATA’; for all other files, the linker will place the ‘.data’ section in ‘.data’.
+
+```ld
+SECTIONS {
+  .text : { *(.text) }
+  .DATA : { [A-Z]*(.data) }
+  .data : { *(.data) }
+  .bss : { *(.bss) }
+}
+```
+
+#### 3.6.4.3 公共符号的输入段
+
+3.6.4.3 Input Section for Common Symbols
+
+公共符号需要一个特殊的写法，因为在许多对象文件格式中，公共符号没有一个特定的输入段。链接器认为公共符号在一个名为 *COMMON* 的输入段。
+
+> A special notation is needed for common symbols, because in many object file formats common symbols do not have a particular input section. The linker treats common symbols as though they are in an input section named ‘COMMON’.
+
+你可以在 *COMMON* 段使用文件名，就像在其他输入段一样。你可以利用这一点将某个特定输入段的公共符号放在一个段，而将其他输入文件的公共符号放在另一个段。
+
+> You may use file names with the ‘COMMON’ section just as with any other input sections. You can use this to place common symbols from a particular input file in one section while common symbols from other input files are placed in another section.
+
+在大多数情况下，输入文件中的公共符号将被放置在输出文件的 *.bss* 段。比如说：
+
+> In most cases, common symbols in input files will be placed in the ‘.bss’ section in the output file. For example:
+
+```ld
+.bss { *(.bss) *(COMMON) }
+```
+
+一些对象文件格式有多于一种类型的公共符号。例如，MIPS ELF 对象文件格式区分了标准通用符号和小型通用符号。在这种情况下，链接器将对其他类型的公共符号使用不同的特殊段名称。在 MIPS ELF 的情况下，链接器对标准公共符号使用 *COMMON*，对小型公共符号使用 *.scommon*。这允许你将不同类型的公共符号映射到内存的不同位置。
+
+> Some object file formats have more than one type of common symbol. For example, the MIPS ELF object file format distinguishes standard common symbols and small common symbols. In this case, the linker will use a different special section name for other types of common symbols. In the case of MIPS ELF, the linker uses ‘COMMON’ for standard common symbols and ‘.scommon’ for small common symbols. This permits you to map the different types of common symbols into memory at different locations.
+
+你有时会在老的链接器脚本中看到 *\[COMMON\]*。这种符号现在已经被认为是过时的了。它等同于 *\*(COMMON)*。
+
+> You will sometimes see ‘[COMMON]’ in old linker scripts. This notation is now considered obsolete. It is equivalent to ‘*(COMMON)’.
+
+#### 3.6.4.4 输入段和垃圾收集
+
+> 3.6.4.4 Input Section and Garbage Collection
+
+当使用链接时垃圾收集时（`--gc-sections`），标记不应该被消除的段往往是有用的。这可以通过在输入段的通配符周围加上 KEEP() 来实现，如 KEEP(\*(.init)) 或 KEEP(SORT_BY_NAME(\*)(.ctors))。
+
+> When link-time garbage collection is in use (‘--gc-sections’), it is often useful to mark sections that should not be eliminated. This is accomplished by surrounding an input section’s wildcard entry with KEEP(), as in KEEP(\*(.init)) or KEEP(SORT_BY_NAME(\*)(.ctors)).
+
+#### 3.6.4.5 输入段示例
+
+> 3.6.4.5 Input Section Example
+
+下面的例子是一个完整的链接器脚本。它告诉链接器从文件 all.o 中读取所有段，并把它们放在输出段 *outputa* 的开始位置 *0x10000* 处。文件 foo.o 中的所有 *.input1* 段紧随其后，在同一个输出段。所有来自 foo.o 的 *.input2* 段都进入输出段 *outputb*，然后是来自 foo1.o 的 *.input1* 段。剩下任何文件的所有 *.input1* 和 *.input2* 段都写入输出段 *outputc*。
+
+> The following example is a complete linker script. It tells the linker to read all of the sections from file all.o and place them at the start of output section ‘outputa’ which starts at location ‘0x10000’. All of section ‘.input1’ from file foo.o follows immediately, in the same output section. All of section ‘.input2’ from foo.o goes into output section ‘outputb’, followed by section ‘.input1’ from foo1.o. All of the remaining ‘.input1’ and ‘.input2’ sections from any files are written to output section ‘outputc’.
+
+```ld
+SECTIONS {
+  outputa 0x10000 :
+    {
+    all.o
+    foo.o (.input1)
+    }
+  outputb :
+    {
+    foo.o (.input2)
+    foo1.o (.input1)
+    }
+  outputc :
+    {
+    *(.input1)
+    *(.input2)
+    }
+}
+```
+
+如果一个输出段的名称与输入段的名称相同，并且可以用 C 语言标识符表示，那么链接器将自动看到 PROVIDE 两个符号：`__start_SECNAME` 和 `__stop_SECNAME`，其中 *SECNAME* 是该段的名称。它们分别表示输出段的起始地址和结束地址。注意：大多数段的名称不能作为 C 语言的标识符来表示，因为它们包含一个 `.` 字符。
+
+> If an output section’s name is the same as the input section’s name and is representable as a C identifier, then the linker will automatically see PROVIDE two symbols: __start_SECNAME and__stop_SECNAME, where SECNAME is the name of the section. These indicate the start address and end address of the output section respectively. Note: most section names are not representable as C identifiers because they contain a ‘.’ character.
+
+### 3.6.5 输出段数据
+
+> 3.6.5 Output Section Data
+
+你可以通过使用 BYTE、SHORT、LONG、QUAD 或者 SQUAD 作为输出段命令，在输出段包含明确的字节数据。每个关键字后面都有一个括号内的表达式，提供了要存储的值（参见[链接器脚本中的表达式]()）。表达式的值被存储在位置计数器的当前值上。
+
+> You can include explicit bytes of data in an output section by using BYTE, SHORT, LONG, QUAD, or SQUAD as an output section command. Each keyword is followed by an expression in parentheses providing the value to store (see Expressions in Linker Scripts). The value of the expression is stored at the current value of the location counter.
+
+BYTE、SHORT、LONG 和 QUAD 命令分别存储一个、两个、四个和八个字节。在存储字节后，位置计数器按存储的字节数递增。
+
+> The BYTE, SHORT, LONG, and QUAD commands store one, two, four, and eight bytes (respectively). After storing the bytes, the location counter is incremented by the number of bytes stored.
+
+例如，这将存储字节 1，然后是符号 *addr* 的四个字节的值。
+
+> For example, this will store the byte 1 followed by the four byte value of the symbol ‘addr’:
+
+```ld
+BYTE(1)
+LONG(addr)
+```
+
+当使用 64 位主机或目标时，QUAD 和 SQUAD 是一样的；它们都存储一个 8 字节，或 64 位的值。当主机和目标机都是 32 位时，一个表达式被计算为 32 位。在这种情况下，QUAD 存储一个零扩展到 64 位的 32 位值，而 SQUAD 存储一个符号扩展到 64 位的 32 位值。
+
+> When using a 64 bit host or target, QUAD and SQUAD are the same; they both store an 8 byte, or 64 bit, value. When both host and target are 32 bits, an expression is computed as 32 bits. In this case QUAD stores a 32 bit value zero extended to 64 bits, and SQUAD stores a 32 bit value sign extended to 64 bits.
+
+如果输出文件的对象文件格式有一个明确的段模式，这是一般的情况，值按这个端模式存储。当对象文件格式没有明确的端模式时，例如 S-recoreds，值按第一个输入对象文件的端模式存储。
+
+> If the object file format of the output file has an explicit endianness, which is the normal case, the value will be stored in that endianness. When the object file format does not have an explicit endianness, as is true of, for example, S-records, the value will be stored in the endianness of the first input object file.
+
+注意--这些命令只在段描述内起作用，在它们之间不起作用，所以下面的命令会使链接器产生一个错误：
+
+> Note—these commands only work inside a section description and not between them, so the following will produce an error from the linker:
+
+```ld
+SECTIONS { .text : { *(.text) } LONG(1) .data : {*(.data) } }
+```
+
+而这句话则可以工作：
+
+> whereas this will work:
+
+```ld
+SECTIONS { .text : { *(.text) ; LONG(1) } .data : {*(.data) } }
+```
+
+你可以使用 FILL 命令来设置当前段的填充模式。它后面是括号中的表达式。段内任何未指定的内存区域（例如，由于输入段需要对齐而留下的空隙）都会用表达式的值来填充，必要时重复。一个 FILL 语句影响它在段定义中出现的那个点之后的内存位置；通过包含一个以上的 FILL 语句，你可以在输出段的不同部分有不同的填充模式。
+
+> You may use the FILL command to set the fill pattern for the current section. It is followed by an expression in parentheses. Any otherwise unspecified regions of memory within the section (for example, gaps left due to the required alignment of input sections) are filled with the value of the expression, repeated as necessary. A FILL statement covers memory locations after the point at which it occurs in the section definition; by including more than one FILL statement, you can have different fill patterns in different parts of an output section.
+
+这个例子显示了如何用值 *0x90* 来填充未指定的内存区域。
+
+> This example shows how to fill unspecified regions of memory with the value ‘0x90’:
+
+```ld
+FILL(0x90909090)
+```
+
+FILL 命令与 `=fillexp` 输出段属性类似，但它只影响 FILL 命令之后的部分，而不是整个段。如果两者都使用，则以 FILL 命令为准。参见[输出段填充]()，了解填充表达式的细节。
+
+> The FILL command is similar to the ‘=fillexp’ output section attribute, but it only affects the part of the section following the FILL command, rather than the entire section. If both are used, the FILL command takes precedence. See Output Section Fill, for details on the fill expression.
+
+### 3.6.6 输出段关键字
+
+> 3.6.6 Output Section Keywords
+
+有几个关键字可以作为输出段的命令出现。
+
+> There are a couple of keywords which can appear as output section commands.
+
+- CREATE_OBJECT_SYMBOLS
+
+  这个命令告诉链接器为每个输入文件创建一个符号。每个符号的名称是相应的输入文件的名称。这些符号的段是 CREATE_OBJECT_SYMBOLS 命令所出现的输出段。
+
+  > The command tells the linker to create a symbol for each input file. The name of each symbol will be the name of the corresponding input file. The section of each symbol will be the output section in which the CREATE_OBJECT_SYMBOLS command appears.
+
+  这是对 a.out 对象文件格式的常规做法。它通常不用于任何其他对象文件格式。
+
+  > This is conventional for the a.out object file format. It is not normally used for any other object file format.
+
+- CONSTRUCTORS
+
+  当使用 a.out 对象文件格式进行链接时，链接器使用一个不寻常的集合结构来支持 C++ 全局构造函数和析构函数。当链接不支持任意段的对象文件格式时，例如 ECOFF 和 XCOFF，链接器将自动识别 C++ 全局构造函数和析构函数的名称。对于这些对象文件格式，CONSTRUCTORS 命令告诉链接器将构造函数信息放在出现 CONSTRUCTORS 命令的输出段中。对于其他对象文件格式，CONSTRUCTORS 命令被忽略。
+
+  > When linking using the a.out object file format, the linker uses an unusual set construct to support C++ global constructors and destructors. When linking object file formats which do not support arbitrary sections, such as ECOFF and XCOFF, the linker will automatically recognize C++ global constructors and destructors by name. For these object file formats, the CONSTRUCTORS command tells the linker to place constructor information in the output section where the CONSTRUCTORS command appears. The CONSTRUCTORS command is ignored for other object file formats.
+
+  符号 `__CTOR_LIST__` 标志着全局构造函数的开始，而符号 `__CTOR_END__` 标志着结束。类似地，`__DTOR_LIST__` 和 `__DTOR_END__` 标志着全局析构函数的开始和结束。列表中的第一个字是条目的数量，接着是每个构造函数或析构函数的地址，然后是一个零。编译器必须安排实际运行该代码。对于这些对象文件格式，GNU C++ 通常从子程序 `__main` 调用构造函数；对 `__main` 的调用会自动插入 main 的启动代码中。GNU C++ 通常通过使用 `atexit` 或直接从函数 `exit` 来运行析构器。
+
+  > The symbol __CTOR_LIST__ marks the start of the global constructors, and the symbol __CTOR_END__ marks the end. Similarly, __DTOR_LIST__ and __DTOR_END__ mark the start and end of the global destructors. The first word in the list is the number of entries, followed by the address of each constructor or destructor, followed by a zero word. The compiler must arrange to actually run the code. For these object file formats GNU C++ normally calls constructors from a subroutine __main; a call to__main is automatically inserted into the startup code for main. GNU C++ normally runs destructors either by using atexit, or directly from the function exit.
+
+  对于像 COFF 或 ELF 这样支持任意段名的对象文件格式，GNU C++ 通常会安排将全局构造函数和析构函数的地址放到 .ctors 和 .dtors 段中。将下面的序列放入你的链接器脚本将建立 GNU C++ 运行时代码期望看到的那种表格。
+
+  > For object file formats such as COFF or ELF which support arbitrary section names, GNU C++ will normally arrange to put the addresses of global constructors and destructors into the .ctors and .dtors sections. Placing the following sequence into your linker script will build the sort of table which the GNU C++ runtime code expects to see.
+
+  ```ld
+  __CTOR_LIST__ = .;
+  LONG((__CTOR_END__ - __CTOR_LIST__) / 4 - 2)
+  *(.ctors)
+  LONG(0)
+  __CTOR_END__ = .;
+  __DTOR_LIST__ = .;
+  LONG((__DTOR_END__ - __DTOR_LIST__) / 4 - 2)
+  *(.dtors)
+  LONG(0)
+  __DTOR_END__ = .;
+  ```
+
+  如果你使用 GNU C++ 对初始化优先级的支持，它提供了对全局构造函数运行顺序的一些控制，你必须在链接时对构造函数进行排序，以确保它们以正确的顺序被执行。在使用 CONSTRUCTORS 命令时，请使用 *SORT_BY_NAME(CONSTRUCTORS)* 来代替。当使用 *.ctors* 和 *.dtors* 段时，使用 *\*(SORT_BY_NAME(.ctors))* 和 *\*(SORT_BY_NAME(.dtors))*，而不仅仅是 *\*(.ctors)* 和 *\*(.dtors)*。
+
+  > If you are using the GNU C++ support for initialization priority, which provides some control over the order in which global constructors are run, you must sort the constructors at link time to ensure that they are executed in the correct order. When using the CONSTRUCTORS command, use ‘SORT_BY_NAME(CONSTRUCTORS)’ instead. When using the .ctors and .dtors sections, use ‘\*(SORT_BY_NAME(.ctors))’ and ‘\*(SORT_BY_NAME(.dtors))’ instead of just ‘\*(.ctors)’ and ‘\*(.dtors)’.
+
+  > 通常，编译器和链接器会自动处理这些问题，你不需要关心。然而，如果你使用 C++ 并编写自己的链接器脚本，你可能需要考虑这个问题。
+
+  Normally the compiler and linker will handle these issues automatically, and you will not need to concern yourself with them. However, you may need to consider this if you are using C++ and writing your own linker scripts.
