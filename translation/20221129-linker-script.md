@@ -30,7 +30,7 @@
 - [简单的链接器脚本命令](#34-简单的链接器脚本命令)
 - [为符号赋值](#35-为符号赋值)
 - [SECTIONS 命令](#36-sections-命令)
-- [MEMORY 命令]()
+- [MEMORY 命令](#37-memory-命令)
 - [PHDRS 命令]()
 - [VERSION 命令]()
 - [链接器脚本中的表达式]()
@@ -331,7 +331,7 @@ TARGET 命令命名了读取输入文件时要使用的 BFD 格式。它影响�
 
 > 3.4.4 Assign alias names to memory regions
 
-可以向 [MEMORY 命令]() 创建的内存区域添加别名。每个名字最多对应一个内存区域。
+可以向 [MEMORY 命令](#37-memory-命令) 创建的内存区域添加别名。每个名字最多对应一个内存区域。
 
 > Alias names can be added to existing memory regions created with the MEMORY Command command. Each name corresponds to at most one memory region.
 
@@ -891,7 +891,7 @@ SECTIONS
 - 一个 ENTRY 命令（见 [ENTRY 命令](#341-设置入口点)）
 - 一个符号赋值（见为[为符号赋值](#35-为符号赋值)）。
 - 一个输出段的描述
-- 一个叠加描述
+- 一个覆盖描述
 
 > - an ENTRY command (see Entry command)
 > - a symbol assignment (see Assigning Values to Symbols)
@@ -916,9 +916,9 @@ SECTIONS
 - [输入段描述](#364-输入段描述)
 - [输出段数据](#365-输出段数据)
 - [输出段关键字](#366-输出段关键字)
-- [输出段丢弃]()
-- [输出段属性]()
-- [叠加描述]()
+- [输出段丢弃](#367-输出段丢弃)
+- [输出段属性](#368-输出段属性)
+- [覆盖描述](#369-覆盖描述)
 
 > - Output Section Description
 > - Output Section Name
@@ -966,7 +966,7 @@ section [address] [(type)] :
 - 符号赋值（参见[为符号赋值](#35-为符号赋值)）
 - 一个输入段描述（见[输入段描述](#364-输入段描述)）
 - 直接包括的数据值（见[输出段数据](#365-输出段数据)）
-- 一个特殊的输出段关键字（见[输出段关键字]()）。
+- 一个特殊的输出段关键字（见[输出段关键字](#366-输出段关键字)）。
 
 > - a symbol assignment (see Assigning Values to Symbols)
 > - an input section description (see Input Section Description)
@@ -1005,7 +1005,7 @@ section [address] [(type)] :
 
 > If an output memory region is set for the section then it is added to this region and its address will be the next free address in that region.
 
-如果 MEMORY 命令被用来创建一个内存区域的列表，那么会选择第一个与段的属性兼容的区域来包含它。该段的输出地址将是该区域的下一个空闲地址；[MEMORY 命令]()。
+如果 MEMORY 命令被用来创建一个内存区域的列表，那么会选择第一个与段的属性兼容的区域来包含它。该段的输出地址将是该区域的下一个空闲地址；[MEMORY 命令](#37-memory-命令)。
 
 > If the MEMORY command has been used to create a list of memory regions then the first region which has attributes compatible with the section is selected to contain it. The section’s output address will be the next free address in that region; MEMORY Command.
 
@@ -1440,7 +1440,7 @@ SECTIONS { .text : { *(.text) ; LONG(1) } .data : {*(.data) } }
 FILL(0x90909090)
 ```
 
-FILL 命令与 `=fillexp` 输出段属性类似，但它只影响 FILL 命令之后的部分，而不是整个段。如果两者都使用，则以 FILL 命令为准。参见[输出段填充]()，了解填充表达式的细节。
+FILL 命令与 `=fillexp` 输出段属性类似，但它只影响 FILL 命令之后的部分，而不是整个段。如果两者都使用，则以 FILL 命令为准。参见[输出段填充](#3688-输出段填充)，了解填充表达式的细节。
 
 > The FILL command is similar to the ‘=fillexp’ output section attribute, but it only affects the part of the section following the FILL command, rather than the entire section. If both are used, the FILL command takes precedence. See Output Section Fill, for details on the fill expression.
 
@@ -1493,6 +1493,468 @@ FILL 命令与 `=fillexp` 输出段属性类似，但它只影响 FILL 命令之
 
   > If you are using the GNU C++ support for initialization priority, which provides some control over the order in which global constructors are run, you must sort the constructors at link time to ensure that they are executed in the correct order. When using the CONSTRUCTORS command, use ‘SORT_BY_NAME(CONSTRUCTORS)’ instead. When using the .ctors and .dtors sections, use ‘\*(SORT_BY_NAME(.ctors))’ and ‘\*(SORT_BY_NAME(.dtors))’ instead of just ‘\*(.ctors)’ and ‘\*(.dtors)’.
 
-  > 通常，编译器和链接器会自动处理这些问题，你不需要关心。然而，如果你使用 C++ 并编写自己的链接器脚本，你可能需要考虑这个问题。
+  通常，编译器和链接器会自动处理这些问题，你不需要关心。然而，如果你使用 C++ 并编写自己的链接器脚本，你可能需要考虑这个问题。
 
-  Normally the compiler and linker will handle these issues automatically, and you will not need to concern yourself with them. However, you may need to consider this if you are using C++ and writing your own linker scripts.
+  > Normally the compiler and linker will handle these issues automatically, and you will not need to concern yourself with them. However, you may need to consider this if you are using C++ and writing your own linker scripts.
+
+### 3.6.7 输出段丢弃
+
+> 3.6.7 Output Section Discarding
+
+链接器通常不会创建没有内容的输出段。这是为了在引用输入段时的方便，这些段可能存在于任何输入文件中，也可能不存在。比如说：
+
+> The linker will not normally create output sections with no contents. This is for convenience when referring to input sections that may or may not be present in any of the input files. For example:
+
+```ld
+.foo : { *(.foo) }
+```
+
+只有在至少一个输入文件中有 *.foo* 段，并且输入段不全是空的情况下，才会在输出文件中创建一个 *.foo* 段。其他在输出段分配空间的链接脚本指令也将创建输出段。给点赋值也会创建输出段，即使这次赋值并未创建空间，除了 *sym* 在脚本中定义为 0 的情况下使用 `. = 0`、`. = . + 0`、`. = sym`、`. = . + sym` 和 `. = ALIGN (. != 0, expr, 1)` 的情况。这允许你用 `. = .` 强制输出一个空的段。
+
+> will only create a ‘.foo’ section in the output file if there is a ‘.foo’ section in at least one input file, and if the input sections are not all empty. Other link script directives that allocate space in an output section will also create the output section. So too will assignments to dot even if the assignment does not create space, except for ‘. = 0’, ‘. = . + 0’, ‘. = sym’, ‘. = . + sym’ and ‘. = ALIGN (. != 0, expr, 1)’ when ‘sym’ is an absolute symbol of value 0 defined in the script. This allows you to force output of an empty section with ‘. = .’.
+
+链接器将忽略被丢弃的输出段的地址分配（见[输出段地址](#363-输出段地址)），除非链接器脚本在输出段定义了符号。在这种情况下，链接器将服从地址分配，可能会推进点，即使该段被丢弃。
+
+> The linker will ignore address assignments (see Output Section Address) on discarded output sections, except when the linker script defines symbols in the output section. In that case the linker will obey the address assignments, possibly advancing dot even though the section is discarded.
+
+特殊的输出段名称 */DISCARD/* 可以用来丢弃输入段。任何被分配到名为 */DISCARD/* 的输出段的输入段都不包括在输出文件中。
+
+> The special output section name ‘/DISCARD/’ may be used to discard input sections. Any input sections which are assigned to an output section named ‘/DISCARD/’ are not included in the output file.
+
+这可以用来丢弃标有 ELF 标志 SHF_GNU_RETAIN的 输入段，否则这些段将从链接器的垃圾收集中被保存。
+
+> This can be used to discard input sections marked with the ELF flag SHF_GNU_RETAIN, which would otherwise have been saved from linker garbage collection.
+
+注意，与 */DISCARD/* 输出段相匹配的段将被丢弃，即使它们在一个 ELF 段组中，而该组的其他成员没有被丢弃。这是故意的。丢弃优先于分组。
+
+> Note, sections that match the ‘/DISCARD/’ output section will be discarded even if they are in an ELF section group which has other members which are not being discarded. This is deliberate. Discarding takes precedence over grouping.
+
+### 3.6.8 输出段属性
+
+> 3.6.8 Output Section Attributes
+
+我们已经展示过，一个输出段的完整描述是这样的：
+
+> We showed above that the full description of an output section looked like this:
+
+```ld
+section [address] [(type)] :
+  [AT(lma)]
+  [ALIGN(section_align) | ALIGN_WITH_INPUT]
+  [SUBALIGN(subsection_align)]
+  [constraint]
+  {
+    output-section-command
+    output-section-command
+    ...
+  } [>region] [AT>lma_region] [:phdr :phdr …] [=fillexp]
+```
+
+我们已经描述了 *section*、*address* 和 *output-section-command*。在这一节中，我们将描述其余的段属性。
+
+> We’ve already described section, address, and output-section-command. In this section we will describe the remaining section attributes.
+
+- [输出段类型](#3681-输出段类型)
+- [输出段 LMA](#3682-输出段-lma)
+- [强制输出对齐](#3683-强制输出对齐)
+- [强制输入对齐](#3684-强制输入对齐)
+- [输出段约束](#3685-输出段约束)
+- [输出段区域](#3686-输出段区域)
+- [输出段 Phdr](#3687-输出段-phdr)
+- [输出段填充](#3688-输出段填充)
+
+> - Output Section Type
+> - Output Section LMA
+> - Forced Output Alignment
+> - Forced Input Alignment
+> - Output Section Constraint
+> - Output Section Region
+> - Output Section Phdr
+> - Output Section Fill
+
+#### 3.6.8.1 输出段类型
+
+> 3.6.8.1 Output Section Type
+
+每个输出段都可以有一个类型。该类型是括号中的一个关键字。已经定义了下列类型：
+
+> Each output section may have a type. The type is a keyword in parentheses. The following types are defined:
+
+- NOLOAD
+
+  该段应该被标记为不可加载，这样在程序运行时它就不会被加载到内存中。
+
+  > The section should be marked as not loadable, so that it will not be loaded into memory when the program is run.
+
+- READONLY
+
+  该段应该被标记为只读。
+
+  > The section should be marked as read-only.
+
+- DSECT
+- COPY
+- INFO
+- OVERLAY
+
+  这些类型的名称是为了向后兼容而支持的，但很少使用。它们都有相同的效果：该段应该被标记为不可分配，这样在程序运行时就不会为该部分分配内存。
+
+  > These type names are supported for backward compatibility, and are rarely used. They all have the same effect: the section should be marked as not allocatable, so that no memory is allocated for the section when the program is run.
+
+- TYPE = *type*
+
+  将段的类型设置为整数 *type*。在生成 ELF 输出文件时，类型名称 SHT_PROGBITS、SHT_STRTAB、SHT_NOTE、SHT_NOBITS、SHT_INIT_ARRAY、SHT_FINI_ARRAY 和 SHT_PREINIT_ARRAY 也允许用于 *type*。确保满足段类型的任何特殊要求是用户的责任。
+
+  > Set the section type to the integer type. When generating an ELF output file, type names SHT_PROGBITS, SHT_STRTAB, SHT_NOTE, SHT_NOBITS, SHT_INIT_ARRAY, SHT_FINI_ARRAY, and SHT_PREINIT_ARRAY are also allowed for type. It is the user’s responsibility to ensure that any special requirements of the section type are met.
+
+- READONLY ( TYPE = *type* )
+
+  这种形式的语法结合了 READONLY 类型和 *type* 指定的类型。
+
+  > This form of the syntax combines the READONLY type with the type specified by type.
+
+链接器通常根据映射到它的输入段来设置输出段的属性。你可以通过使用段类型来覆盖这一点。例如，在下面的脚本示例中，*ROM* 段在内存位置 *0* 被寻址，在程序运行时不需要加载。
+
+> The linker normally sets the attributes of an output section based on the input sections which map into it. You can override this by using the section type. For example, in the script sample below, the ‘ROM’ section is addressed at memory location ‘0’ and does not need to be loaded when the program is run.
+
+```ld
+SECTIONS {
+  ROM 0 (NOLOAD) : { ... }
+  ...
+}
+```
+
+#### 3.6.8.2 输出段 LMA
+
+> 3.6.8.2 Output Section LMA
+
+每个段都有一个虚拟地址（VMA）和一个加载地址（LMA）；参见[链接器脚本的基本概念](#31-链接器脚本的基本概念)。虚拟地址是由前述的[输出段地址](#363-输出段地址)指定的。加载地址是由 AT 或 AT> 关键字指定的。指定一个加载地址是可选的。
+
+> Every section has a virtual address (VMA) and a load address (LMA); see Basic Linker Script Concepts. The virtual address is specified by the see Output Section Address described earlier. The load address is specified by the AT or AT> keywords. Specifying a load address is optional.
+
+AT 关键字需要一个表达式作为参数。这指定了该段的精确加载地址。AT> 关键字以一个内存区域的名称作为参数。参见 [MEMORY 命令](#37-memory-命令)。该段的加载地址被设置为该区域的下一个空闲地址，按照该段的对齐要求进行对齐。
+
+> The AT keyword takes an expression as an argument. This specifies the exact load address of the section. The AT> keyword takes the name of a memory region as an argument. See MEMORY Command. The load address of the section is set to the next free address in the region, aligned to the section’s alignment requirements.
+
+如果对于可分配的段既没有指定 AT 也没有指定 AT>，链接器将使用以下启发式方法来确定加载地址：
+
+> If neither AT nor AT> is specified for an allocatable section, the linker will use the following heuristic to determine the load address:
+
+- 如果为该段指定了一个 VMA 地址，那么它也会被用作 LMA 地址。
+- 如果该段是不可分配的，那么它的 LMA 将被设置为其 VMA。
+- 否则，如果能找到一个与该段兼容的内存区域，并且该区域至少包含一个段，则该段的 LMA 被设置，以满足：VMA 和 LMA 之间的差值与位于该区域的最后一个段的 VMA 和 LMA 之间的差值相同。
+- 如果没有声明任何内存区域，那么在上一步中会使用一个覆盖整个地址空间的默认区域。
+- 如果找不到合适的区域，或者找到的区域里没有段，那么 LMA 被设置为等于 VMA。
+
+> - If the section has a specific VMA address, then this is used as the LMA address as well.
+> - If the section is not allocatable then its LMA is set to its VMA.
+> - Otherwise if a memory region can be found that is compatible with the current section, and this region contains at least one section, then the LMA is set so the difference between the VMA and LMA is the same as the difference between the VMA and LMA of the last section in the located region.
+> - If no memory regions have been declared then a default region that covers the entire address space is used in the previous step.
+> - If no suitable region could be found, or there was no previous section then the LMA is set equal to the VMA.
+
+设计这个功能是为了使建立一个 ROM 映像变得容易。例如，下面的链接器脚本创建了三个输出段：一个叫 *.text*，从 0x1000 开始，一个叫 *.mdata*，在 *.text* 区的末尾加载，尽管其 VMA 是 0x2000，还有一个叫 *.bss*，在地址 0x3000 存放未初始化的数据。符号 *_data* 的定义值为 0x2000，这表明位置计数器持有 VMA 值，而不是 LMA 值。
+
+> This feature is designed to make it easy to build a ROM image. For example, the following linker script creates three output sections: one called ‘.text’, which starts at 0x1000, one called ‘.mdata’, which is loaded at the end of the ‘.text’ section even though its VMA is 0x2000, and one called ‘.bss’ to hold uninitialized data at address 0x3000. The symbol _data is defined with the value 0x2000, which shows that the location counter holds the VMA value, not the LMA value.
+
+```ld
+SECTIONS
+  {
+  .text 0x1000 : { *(.text) _etext = . ; }
+  .mdata 0x2000 :
+    AT ( ADDR (.text) + SIZEOF (.text) )
+    { _data = . ; *(.data); _edata = . ;  }
+  .bss 0x3000 :
+    { _bstart = . ;  *(.bss) *(COMMON) ; _bend = . ;}
+}
+```
+
+用这个链接器脚本生成的程序的运行时初始化代码将包括如下内容，将初始化数据从 ROM 映像复制到其运行时地址。注意这段代码是如何利用链接器脚本所定义的符号的。
+
+> The run-time initialization code for use with a program generated with this linker script would include something like the following, to copy the initialized data from the ROM image to its runtime address. Notice how this code takes advantage of the symbols defined by the linker script.
+
+```c
+extern char _etext,_data, _edata,_bstart, _bend;
+char *src = &_etext;
+char *dst = &_data;
+
+/*ROM has data at end of text; copy it.*/
+while (dst < &_edata)
+  *dst++ = *src++;
+
+/*Zero bss.*/
+for (dst = &_bstart; dst< &_bend; dst++)
+  *dst = 0;
+```
+
+#### 3.6.8.3 强制输出对齐
+
+> 3.6.8.3 Forced Output Alignment
+
+你可以通过使用 ALIGN 来增加一个输出段的对齐方式。另外你可以通过 ALIGN_WITH_INPUT 属性强制要求 VMA 和 LMA 之间的差异在整个输出段保持不变。
+
+> You can increase an output section’s alignment by using ALIGN. As an alternative you can enforce that the difference between the VMA and LMA remains intact throughout this output section with the ALIGN_WITH_INPUT attribute.
+
+#### 3.6.8.4 强制输入对齐
+
+> 3.6.8.4 Forced Input Alignment
+
+你可以通过使用 SUBALIGN 在输出段强制输入段对齐。指定的值会覆盖输入段给出的任何对齐方式，无论是大还是小。
+
+> You can force input section alignment within an output section by using SUBALIGN. The value specified overrides any alignment given by input sections, whether larger or smaller.
+
+#### 3.6.8.5 输出段约束
+
+> 3.6.8.5 Output Section Constraint
+
+你可以通过使用关键字 ONLY_IF_RO 和 ONLY_IF_RW 分别指定，只有当一个输出段的所有输入段都是只读的，或者所有输入段都是读写的时候才可以创建。
+
+> You can specify that an output section should only be created if all of its input sections are read-only or all of its input sections are read-write by using the keyword ONLY_IF_RO and ONLY_IF_RW respectively.
+
+#### 3.6.8.6 输出段区域
+
+> 3.6.8.6 Output Section Region
+
+你可以通过使用 *>region* 将一个段分配到一个先前定义的内存区域。参见 [MEMORY 命令](#37-memory-命令)。
+
+> You can assign a section to a previously defined region of memory by using ‘>region’. See MEMORY Command.
+
+下面是一个简单的例子：
+
+> Here is a simple example:
+
+```ld
+MEMORY { rom : ORIGIN = 0x1000, LENGTH = 0x1000 }
+SECTIONS { ROM : { *(.text) } >rom }
+```
+
+#### 3.6.8.7 输出段 Phdr
+
+> 3.6.8.7 Output Section Phdr
+
+你可以通过使用 *:phdr* 将一个段分配给先前定义的程序段。参见 [PHDRS 命令]()。如果一个段被分配到一个或多个程序段，那么所有后续分配的段也将被分配到这些程序段，除非它们明确使用了 *:phdr* 修饰符。你可以使用 *:NONE* 来告诉链接器不要把这个段放在任何段中。
+
+> You can assign a section to a previously defined program segment by using ‘:phdr’. See PHDRS Command. If a section is assigned to one or more segments, then all subsequent allocated sections will be assigned to those segments as well, unless they use an explicitly :phdr modifier. You can use :NONE to tell the linker to not put the section in any segment at all.
+
+下面是一个简单的例子：
+
+> Here is a simple example:
+
+```ld
+PHDRS { text PT_LOAD ; }
+SECTIONS { .text : { *(.text) } :text }
+```
+
+#### 3.6.8.8 输出段填充
+
+> 3.6.8.8 Output Section Fill
+
+你可以通过使用 *=fillexp* 来设置整个段的填充模式。 *fillexp* 是一个表达式（参见[链接器脚本中的表达式]()）。在输出段的任何其他未指定的内存区域（例如，由于输入段的对齐要求而留下的空隙）将被填入该值，必要时重复。如果填充表达式是一个简单的十六进制数字，即一串以 *0x* 开头的十六进制数字，没有尾部的 *k* 或 *M*，那么可以使用任意长的十六进制数字序列来指定填充模式；前导零也成为模式的一部分。对于所有其他情况，包括额外的括号或单目 +，填充模式是表达式值的四个最小有效字节。在所有情况下，数字都是大端的。
+
+> You can set the fill pattern for an entire section by using ‘=fillexp’. fillexp is an expression (see Expressions in Linker Scripts). Any otherwise unspecified regions of memory within the output section (for example, gaps left due to the required alignment of input sections) will be filled with the value, repeated as necessary. If the fill expression is a simple hex number, ie. a string of hex digit starting with ‘0x’ and without a trailing ‘k’ or ‘M’, then an arbitrarily long sequence of hex digits can be used to specify the fill pattern; Leading zeros become part of the pattern too. For all other cases, including extra parentheses or a unary +, the fill pattern is the four least significant bytes of the value of the expression. In all cases, the number is big-endian.
+
+你也可以用输出段命令中的 FILL 命令改变填充值；（见[输出段数据](#365-输出段数据)）。
+
+> You can also change the fill value with a FILL command in the output section commands; (see Output Section Data).
+
+下面是一个简单的例子：
+
+> Here is a simple example:
+
+```ld
+SECTIONS { .text : { *(.text) } =0x90909090 }
+```
+
+### 3.6.9 覆盖描述
+
+> 3.6.9 Overlay Description
+
+覆盖描述提供了一种简单的方法来描述作为单个内存映像的一部分被加载但在同一内存地址运行的多个段。在运行时，某种覆盖管理器会根据需要将重叠部分复制到运行时的内存地址中，也许是通过简单地操作地址位。这种方法很有用，例如，当某一区域的内存比另一区域快时。
+
+> An overlay description provides an easy way to describe sections which are to be loaded as part of a single memory image but are to be run at the same memory address. At run time, some sort of overlay manager will copy the overlaid sections in and out of the runtime memory address as required, perhaps by simply manipulating addressing bits. This approach can be useful, for example, when a certain region of memory is faster than another.
+
+覆盖是用 OVERLAY 命令描述的。OVERLAY 命令是在 SECTIONS 命令中使用的，就像输出段的描述。OVERLAY 命令的完整语法如下：
+
+> Overlays are described using the OVERLAY command. The OVERLAY command is used within a SECTIONS command, like an output section description. The full syntax of the OVERLAY command is as follows:
+
+```ld
+OVERLAY [start] : [NOCROSSREFS] [AT ( ldaddr )]
+  {
+    secname1
+      {
+        output-section-command
+        output-section-command
+        …
+      } [:phdr…] [=fill]
+    secname2
+      {
+        output-section-command
+        output-section-command
+        …
+      } [:phdr…] [=fill]
+    …
+  } [>region] [:phdr…] [=fill] [,]
+```
+
+除了 OVERLAY（一个关键字），其他都是可选的，每个段都必须有一个名称（上面的 *secname1* 和 *secname2*）。OVERLAY 构造中的段定义与一般的 SECTIONS 结构（见 [SECTIONS 命令](#36-sections-命令)）中的定义相同，只是在一个 OVERLAY 中不能为段定义地址和内存区域。
+
+> Everything is optional except OVERLAY (a keyword), and each section must have a name (secname1 and secname2 above). The section definitions within the OVERLAY construct are identical to those within the general SECTIONS construct (see SECTIONS Command), except that no addresses and no memory regions may be defined for sections within an OVERLAY.
+
+如果使用了填充，并且下一个 section-command 看起来像表达式的延续，那么末尾的逗号可能是必需的。
+
+> The comma at the end may be required if a fill is used and the next sections-command looks like a continuation of the expression.
+
+这些段都定义在相同的起始地址。各部分的加载地址是这样安排的：它们在内存中是连续的，从用于整个 OVERLAY 的加载地址开始（与普通的段定义一样，加载地址是可选的，默认为起始地址；起始地址也是可选的，默认为位置计数器的当前值）。
+
+> The sections are all defined with the same starting address. The load addresses of the sections are arranged such that they are consecutive in memory starting at the load address used for the OVERLAY as a whole (as with normal section definitions, the load address is optional, and defaults to the start address; the start address is also optional, and defaults to the current value of the location counter).
+
+如果使用了 NOCROSSREFS 关键字，并且在各段之间存在任何引用，链接器将报告一个错误。由于各段都在同一地址运行，通常一个段直接引用另一个段是没有意义的。参见 [NOCROSSREFS](#345-其他链接器脚本命令)。
+
+> If the NOCROSSREFS keyword is used, and there are any references among the sections, the linker will report an error. Since the sections all run at the same address, it normally does not make sense for one section to refer directly to another. See NOCROSSREFS.
+
+对于 OVERLAY 中的每个段，链接器会自动提供两个符号。符号 `__load_start_secname` 定义为该部分的起始加载地址。符号 `__load_stop_secname` 定义为该部分的结束装载地址。*secname* 中任何在 C 语言标识符中不合法的字符都被删除。C（或汇编器）代码可以使用这些符号在必要时移动重叠的部分。
+
+> For each section within the OVERLAY, the linker automatically provides two symbols. The symbol __load_start_secname is defined as the starting load address of the section. The symbol__load_stop_secname is defined as the final load address of the section. Any characters within secname which are not legal within C identifiers are removed. C (or assembler) code may use these symbols to move the overlaid sections around as necessary.
+
+在覆盖结束时，位置计数器的值被设置为覆盖的起始地址加上最大段的大小。
+
+> At the end of the overlay, the value of the location counter is set to the start address of the overlay plus the size of the largest section.
+
+下面是一个例子。请记住，这将出现在一个 SECTIONS 结构中。
+
+> Here is an example. Remember that this would appear inside a SECTIONS construct.
+
+```ld
+OVERLAY 0x1000 : AT (0x4000)
+  {
+    .text0 { o1/*.o(.text) }
+    .text1 { o2/*.o(.text) }
+  }
+```
+
+这将定义 *.text0* 和 *.text1* 都从地址 0x1000 开始。*.text0* 可以从地址 0x4000 处加载，而 *.text1* 可以从 *.text0* 之后加载。如果被引用，以下符号将被定义：\__load_start_text0, \__load_stop_text0, \__load_start_text1, \__load_stop_text1`。
+
+> This will define both ‘.text0’ and ‘.text1’ to start at address 0x1000. ‘.text0’ will be loaded at address 0x4000, and ‘.text1’ will be loaded immediately after ‘.text0’. The following symbols will be defined if referenced: \__load_start_text0, \__load_stop_text0, \__load_start_text1, \__load_stop_text1.
+
+复制覆盖 *.text1* 覆盖区的 C 语言代码可能看起来像下面这样。
+
+> C code to copy overlay .text1 into the overlay area might look like the following.
+
+```c
+extern char __load_start_text1,__load_stop_text1;
+memcpy ((char *) 0x1000, &__load_start_text1,
+        &__load_stop_text1 - &__load_start_text1);
+```
+
+注意，OVERLAY 命令只是语法上的糖，因为它所做的一切都可以用更基本的命令来完成。上面的例子可以写成以下形式，产生相同的效果。
+
+> Note that the OVERLAY command is just syntactic sugar, since everything it does can be done using the more basic commands. The above example could have been written identically as follows.
+
+```ld
+.text0 0x1000 : AT (0x4000) { o1/*.o(.text) }
+PROVIDE (__load_start_text0 = LOADADDR (.text0));
+PROVIDE (__load_stop_text0 = LOADADDR (.text0) + SIZEOF (.text0));
+.text1 0x1000 : AT (0x4000 + SIZEOF (.text0)) { o2/*.o(.text) }
+PROVIDE (__load_start_text1 = LOADADDR (.text1));
+PROVIDE (__load_stop_text1 = LOADADDR (.text1) + SIZEOF (.text1));
+. = 0x1000 + MAX (SIZEOF (.text0), SIZEOF (.text1));
+```
+
+## 3.7 MEMORY 命令
+
+> 3.7 MEMORY Command
+
+链接器的默认配置允许分配所有可用的内存。你可以通过使用 MEMORY 命令来覆盖它。
+
+> The linker’s default configuration permits allocation of all available memory. You can override this by using the MEMORY command.
+
+MEMORY 命令描述了目标中内存块的位置和大小。你可以用它来描述哪些内存区域可以被链接器使用，哪些内存区域它必须避开。然后，你可以将段分配给特定的内存区域。链接器将根据内存区域来设置段地址，并对变得太满的区域发出警告。链接器不会为了适应可用的区域而把段弄乱。
+
+> The MEMORY command describes the location and size of blocks of memory in the target. You can use it to describe which memory regions may be used by the linker, and which memory regions it must avoid. You can then assign sections to particular memory regions. The linker will set section addresses based on the memory regions, and will warn about regions that become too full. The linker will not shuffle sections around to fit into the available regions.
+
+一个链接器脚本可以多次使用 MEMORY 命令，但是，所有定义的内存块都被当作是在一个 MEMORY 命令中指定的。MEMORY 的语法是：
+
+> A linker script may contain many uses of the MEMORY command, however, all memory blocks defined are treated as if they were specified inside a single MEMORY command. The syntax for MEMORY is:
+
+```ld
+MEMORY
+  {
+    name [(attr)] : ORIGIN = origin, LENGTH = len
+    ...
+  }
+```
+
+*name* 是链接器脚本中用来指代区域的名称。区域名称在链接器脚本之外没有任何意义。区域名称存储在一个单独的名称空间中，不会与符号名称、文件名称或章节名称冲突。在 MEMORY 命令中，每个内存区域必须有一个独占的名字。然而你可以用给内存区域分配别名的命令给现有的内存区域添加别名。
+
+> The name is a name used in the linker script to refer to the region. The region name has no meaning outside of the linker script. Region names are stored in a separate name space, and will not conflict with symbol names, file names, or section names. Each memory region must have a distinct name within the MEMORY command. However you can add later alias names to existing memory regions with the Assign alias names to memory regions command.
+
+*attr* 字符串是一个可选的属性列表，如果输入段在链接器脚本中没有明确地映射，属性用于指定是否为该段使用某个特定的内存区域。正如在 [SECTIONS 命令](#36-sections-命令)中所描述的，如果你没有为某个输入段指定一个输出段，链接器将创建一个与输入段同名的输出段。如果你定义了区域属性，链接器将使用它们来选择它所创建的输出段的内存区域。
+
+> The attr string is an optional list of attributes that specify whether to use a particular memory region for an input section which is not explicitly mapped in the linker script. As described in SECTIONS Command, if you do not specify an output section for some input section, the linker will create an output section with the same name as the input section. If you define region attributes, the linker will use them to select the memory region for the output section that it creates.
+
+*attr* 字符串必须只由以下字符组成：
+
+> The attr string must consist only of the following characters:
+
+- ‘R’
+  只读段
+  > Read-only section
+
+- ‘W’
+  读写段
+  > Read/write section
+
+- ‘X’
+  可执行段
+  > Executable section
+
+- ‘A’
+  可分配段
+  > Allocatable section
+
+- ‘I’
+  已初始化段
+  > Initialized section
+
+- ‘L’
+  和 ‘I’ 一样
+  > Same as ‘I’
+
+- ‘!’
+  反转后续任何属性的意义
+  > Invert the sense of any of the attributes that follow
+
+如果一个未映射的段与除 ‘!’ 之外的任何列出的属性相匹配，它将被放置在内存区域中。‘!’ 属性反转了后面字符的意义，所以只有当一个未映射的段不匹配后面列出的任何属性时，它才会被放在内存区域中。因此，一个 ‘RW!X’ 的属性字符串将匹配任何具有 ‘R’ 和 ‘W’ 属性或两者，但没有 ‘X’ 的未映射段。
+
+> If an unmapped section matches any of the listed attributes other than ‘!’, it will be placed in the memory region. The ‘!’ attribute reverses the test for the characters that follow, so that an unmapped section will be placed in the memory region only if it does not match any of the attributes listed afterwards. Thus an attribute string of ‘RW!X’ will match any unmapped section that has either or both of the ‘R’ and ‘W’ attributes, but only as long as the section does not also have the ‘X’ attribute.
+
+*origin* 是内存区域起始地址的数字表达式。该表达式必须求值为一个常数，并且不能涉及任何符号。关键字 ORIGIN 可以缩写为 org 或 o（但不能缩写为 ORG）。
+
+> The origin is an numerical expression for the start address of the memory region. The expression must evaluate to a constant and it cannot involve any symbols. The keyword ORIGIN may be abbreviated to org or o (but not, for example, ORG).
+
+*len* 是一个关于内存区域大小的表达式，单位是字节。与 origin 表达式一样，该表达式必须是数字，并且必须求值为一个常数。关键词 LENGTH 可以简写为 len 或 l。
+
+> The len is an expression for the size in bytes of the memory region. As with the origin expression, the expression must be numerical only and must evaluate to a constant. The keyword LENGTH may be abbreviated to len or l.
+
+在下面的例子中，我们指定有两个可供分配的内存区域：一个从 ‘0’ 开始，为 256 KB，另一个从 ‘0x40000000’ 开始，为 4M。链接器将把每一个没有明确映射到内存区域，并且是只读或可执行的段放入 ‘rom’ 内存区域。链接器将把其他没有明确映射到内存区域的段放入 ‘ram’ 内存区域。
+
+> In the following example, we specify that there are two memory regions available for allocation: one starting at ‘0’ for 256 kilobytes, and the other starting at ‘0x40000000’ for four megabytes. The linker will place into the ‘rom’ memory region every section which is not explicitly mapped into a memory region, and is either read-only or executable. The linker will place other sections which are not explicitly mapped into a memory region into the ‘ram’ memory region.
+
+```ld
+MEMORY
+  {
+    rom (rx)  : ORIGIN = 0, LENGTH = 256K
+    ram (!rx) : org = 0x40000000, l = 4M
+  }
+```
+
+一旦你定义了一个内存区域，你就可以通过使用 ‘>region’ 输出段属性来指示链接器将特定的输出段放入该内存区域。例如，如果你有一个名为 ‘mem’的内存区域，你可以在输出段定义中使用 ‘>mem’。参见[输出段区域](#3686-输出段区域)。如果没有为输出段指定地址，链接器将把地址设置为内存区域内的下一个可用地址。如果指向一个内存区域的所有输出段对该区域来说太大，链接器将发出错误信息。
+
+> Once you define a memory region, you can direct the linker to place specific output sections into that memory region by using the ‘>region’ output section attribute. For example, if you have a memory region named ‘mem’, you would use ‘>mem’ in the output section definition. See Output Section Region. If no address was specified for the output section, the linker will set the address to the next available address within the memory region. If the combined output sections directed to a memory region are too large for the region, the linker will issue an error message.
+
+可以通过 ORIGIN(memory) 和 LENGTH(memory) 函数访问表达式中内存的起点和长度：
+
+> It is possible to access the origin and length of a memory in an expression via the ORIGIN(memory) and LENGTH(memory) functions:
+
+```ld
+_fstack = ORIGIN(ram) + LENGTH(ram) - 4;
+```
