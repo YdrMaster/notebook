@@ -23,18 +23,3 @@
   - 20220617-[可退出式 SBI 和基于 SBI 引导的思路](oreboot/20220617-design.md)
 
 - [咨询记录](consult-journal)
-
-## 等待队列
-
-协程等待队列：没干完且短时间内不打算干的事。
-
-### 翻译
-
-- 20220330-[微软研究院锐评 `fork`](/translation/20220330-get-fork-out-of-my-os.md)
-  > 需要实现 `fork` 的时候写完
-- 20220509-[SBI 规范 v1.0](/translation/20220509-riscv-sbi-v1/toc.md)
-  > 用什么写什么
-- 20220528-[设备树规范](/translation/20220528-devicetree/toc.md)
-  > 用什么写什么
-- 20220624-[虚拟 IO 设备标准 v1.2](/translation/20220624-virtio/toc.md)
-  > 用什么写什么
