@@ -20,7 +20,7 @@
 
 > You may supply your own linker script by using the ‘-T’ command line option. When you do this, your linker script will replace the default linker script.
 
-你也可以隐式地使用链接器脚本，把它们命名为链接器的输入文件，就像它们是要被链接的文件一样。参见[隐式链接器脚本]()。
+你也可以隐式地使用链接器脚本，把它们命名为链接器的输入文件，就像它们是要被链接的文件一样。参见[隐式链接器脚本](#311-隐式链接器脚本)。
 
 > You may also use linker scripts implicitly by naming them as input files to the linker, as though they were files to be linked. See Implicit Linker Scripts.
 
@@ -34,7 +34,7 @@
 - [PHDRS 命令](#38-phdrs-命令)
 - [VERSION 命令](#39-version-命令)
 - [链接器脚本中的表达式](#310-链接器脚本中的表达式)
-- [隐式链接器脚本]()
+- [隐式链接器脚本](#311-隐式链接器脚本)
 
 > - Basic Linker Script Concepts
 > - Linker Script Format
@@ -2579,19 +2579,154 @@ SECTIONS { ...
 
 #### DATA_SEGMENT_ALIGN(*maxpagesize*, *commonpagesize*)
 
-这等同于
-
-> This is equivalent to either
+This is equivalent to either
 
 ```ld
 (ALIGN(maxpagesize) + (. & (maxpagesize - 1)))
 ```
 
-或
-
-> or
+or
 
 ```ld
 (ALIGN(maxpagesize)
  + ((. + commonpagesize - 1) & (maxpagesize - commonpagesize)))
 ```
+
+depending on whether the latter uses fewer commonpagesize sized pages for the data segment (area between the result of this expression and DATA_SEGMENT_END) than the former or not. If the latter form is used, it means commonpagesize bytes of runtime memory will be saved at the expense of up to commonpagesize wasted bytes in the on-disk file.
+
+This expression can only be used directly in SECTIONS commands, not in any output section descriptions and only once in the linker script. commonpagesize should be less or equal to maxpagesize and should be the system page size the object wants to be optimized for while still running on system page sizes up to maxpagesize. Note however that ‘-z relro’ protection will not be effective if the system page size is larger than commonpagesize.
+
+Example:
+
+```ld
+. = DATA_SEGMENT_ALIGN(0x10000, 0x2000);
+```
+
+#### DATA_SEGMENT_END(*exp*)
+
+This defines the end of data segment for DATA_SEGMENT_ALIGN evaluation purposes.
+
+```ld
+. = DATA_SEGMENT_END(.);
+
+```
+
+#### DATA_SEGMENT_RELRO_END(*offset*, *exp*)
+
+This defines the end of the PT_GNU_RELRO segment when ‘-z relro’ option is used. When ‘-z relro’ option is not present, DATA_SEGMENT_RELRO_END does nothing, otherwise DATA_SEGMENT_ALIGN is padded so that exp + offset is aligned to the commonpagesize argument given to DATA_SEGMENT_ALIGN. If present in the linker script, it must be placed between DATA_SEGMENT_ALIGN and DATA_SEGMENT_END. Evaluates to the second argument plus any padding needed at the end of the PT_GNU_RELRO segment due to section alignment.
+
+```ld
+. = DATA_SEGMENT_RELRO_END(24, .);
+```
+
+#### DEFINED(*symbol*)
+
+如果符号在链接器全局符号表中，并且在脚本中使用 DEFINED 的语句前定义，则返回 1，否则返回 0。你可以使用这个函数来为符号提供默认值。例如，下面的脚本片段显示了如何将全局符号 ‘begin’ 设置为 ‘.text’ 节的起始地址--但如果一个名为 ‘begin’ 的符号已经存在，其值将被保留。
+
+> Return 1 if symbol is in the linker global symbol table and is defined before the statement using DEFINED in the script, otherwise return 0. You can use this function to provide default values for symbols. For example, the following script fragment shows how to set a global symbol ‘begin’ to the first location in the ‘.text’ section—but if a symbol called ‘begin’ already existed, its value is preserved:
+
+```ld
+SECTIONS { ...
+  .text : {
+    begin = DEFINED(begin) ? begin : . ;
+    ...
+  }
+  ...
+}
+```
+
+#### LENGTH(*memory*)
+
+返回名为 *memory* 的内存区域的长度。
+
+> Return the length of the memory region named memory.
+
+#### LOADADDR(*section*)
+
+返回名为 *section* 的节的绝对 LMA。（见[输出节 LMA](#3682-输出节-lma)）。
+
+> Return the absolute LMA of the named section. (see Output Section LMA).
+
+#### LOG2CEIL(*exp*)
+
+返回 *exp* 以 2 为底的对数，向上取整。LOG2CEIL(0) 返回 0。
+
+> Return the binary logarithm of exp rounded towards infinity. LOG2CEIL(0) returns 0.
+
+#### MAX(*exp1*, *exp2*)
+
+返回 *exp1* 和 *exp2* 的最大值。
+
+> Returns the maximum of exp1 and exp2.
+
+#### MIN(*exp1*, *exp2*)
+
+返回 *exp1* 和 *exp2* 的最小值。
+
+> Returns the minimum of exp1 and exp2.
+
+#### NEXT(*exp*)
+
+返回下一个未分配的、是 *exp* 的倍数的地址。这个函数与 ALIGN(*exp*) 近似；除非你使用 MEMORY 命令为输出文件定义不连续的内存，否则这两个函数是等同的。
+
+> Return the next unallocated address that is a multiple of exp. This function is closely related to ALIGN(exp); unless you use the MEMORY command to define discontinuous memory for the output file, the two functions are equivalent.
+
+#### ORIGIN(*memory*)
+
+返回名为 *memory* 的内存区域的起点。
+
+> Return the origin of the memory region named memory.
+
+#### SEGMENT_START(*segment*, *default*)
+
+返回名为 *segment* 的段的基址。如果这个段已经有一个明确的值（通过命令行的‘-T’选项），那么这个值将被返回，否则这个值设为 *default*。目前，‘-T’命令行选项只能用于设置“text”、“data”和“bss”段的基址，但你可以对任何段名使用 SEGMENT_START。
+
+> Return the base address of the named segment. If an explicit value has already been given for this segment (with a command-line ‘-T’ option) then that value will be returned otherwise the value will be default. At present, the ‘-T’ command-line option can only be used to set the base address for the “text”, “data”, and “bss” sections, but you can use SEGMENT_START with any segment name.
+
+#### SIZEOF(*section*)
+
+如果名为 *section* 的节已被分配，则返回该节以字节为单位的大小。如果在求值时该节还没有被分配，链接器将报一个错。在下面的例子中，*symbol_1* 和 *symbol_2* 被分配了相同的值：
+
+> Return the size in bytes of the named section, if that section has been allocated. If the section has not been allocated when this is evaluated, the linker will report an error. In the following example, symbol_1 and symbol_2 are assigned identical values:
+
+```ld
+SECTIONS { ...
+  .output {
+    .start = . ;
+    ...
+    .end = . ;
+    }
+  symbol_1 = .end - .start ;
+  symbol_2 = SIZEOF(.output);
+... }
+```
+
+#### SIZEOF_HEADERS
+
+返回输出文件头的大小，以字节为单位。这是出现在输出文件开头的信息。你可以在设置第一个节的起始地址时使用这个数字，以方便分页。
+
+> Return the size in bytes of the output file’s headers. This is information which appears at the start of the output file. You can use this number when setting the start address of the first section, if you choose, to facilitate paging.
+
+在制作 ELF 输出文件时，如果链接器脚本使用 SIZEOF_HEADERS 内置函数，链接器必须在确定所有节的地址和大小之前计算出程序头的数量。如果链接器后来发现它需要额外的程序头，它将报告一个错误‘not enough room for program headers’。为了避免这个错误，你必须避免使用 SIZEOF_HEADERS 函数，或者你必须重新编写你的链接器脚本以避免强迫链接器使用额外的程序头，或者你必须使用 PHDRS 命令自己定义程序头（参见 [PHDRS 命令](#38-phdrs-命令)）。
+
+> When producing an ELF output file, if the linker script uses the SIZEOF_HEADERS builtin function, the linker must compute the number of program headers before it has determined all the section addresses and sizes. If the linker later discovers that it needs additional program headers, it will report an error ‘not enough room for program headers’. To avoid this error, you must avoid using the SIZEOF_HEADERS function, or you must rework your linker script to avoid forcing the linker to use additional program headers, or you must define the program headers yourself using the PHDRS command (see PHDRS Command).
+
+## 3.11 隐式链接器脚本
+
+> 3.11 Implicit Linker Scripts
+
+如果你指定了一个链接器输入文件，而链接器不能将其识别为对象文件或归档文件，它将尝试将该文件作为一个链接器脚本来读取。如果该文件不能被解析为链接器脚本，链接器将报告一个错误。
+
+> If you specify a linker input file which the linker can not recognize as an object file or an archive file, it will try to read the file as a linker script. If the file can not be parsed as a linker script, the linker will report an error.
+
+隐式链接器脚本不会取代默认的链接器脚本。
+
+> An implicit linker script will not replace the default linker script.
+
+通常情况下，隐式链接器脚本只包含符号赋值，或 INPUT、GROUP 或 VERSION 命令。
+
+> Typically an implicit linker script would contain only symbol assignments, or the INPUT, GROUP, or VERSION commands.
+
+由于隐式链接器脚本而读取的任何输入文件将从命令行中读取隐式链接器脚本的位置读取。这可能会影响归档搜索。
+
+> Any input files read because of an implicit linker script will be read at the position in the command line where the implicit linker script was read. This can affect archive searching.
