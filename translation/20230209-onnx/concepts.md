@@ -2,7 +2,7 @@
 
 > ONNX Concepts
 
-ONNX 可以比作一种专门研究数学函数的编程语言。它定义了机器学习模型用这种语言实现其推理功能所需的所有必要算子。线性回归可以用以下方式表示:
+ONNX 类似于一种专门研究数学函数的编程语言。它定义了机器学习模型用这种语言实现其推理功能所需的所有必要算子。线性回归可以用以下方式表示:
 
 > ONNX can be compared to a programming language specialized in mathematical functions. It defines all the necessary operations a machine learning model needs to implement its inference function with this language. A linear regression could be represented in the following way:
 
@@ -97,7 +97,7 @@ axc = onnx.Add(ax, c)
 
 > Serialization with protobuf
 
-将机器学习模型部署到生产中通常需要重建用于训练该模型的整个环境，大多数情况下使用 *docker*。一旦模型被转换成 ONNX，生产环境只需要一个运行时来执行用 ONNX 算子定义的图。这个运行时可以用任何适合生产应用的语言开发，C、java、python、javascript、C#、Webassembly、ARM…
+将机器学习模型部署到生产中通常需要重建用于训练该模型的整个环境，通常情况下使用 *docker*。一旦模型被转换成 ONNX，生产环境只需要一个运行时来执行用 ONNX 算子定义的图。这个运行时可以用任何适合生产应用的语言开发，C、java、python、javascript、C#、Webassembly、ARM…
 
 > The deployment of a machine-learned model into production usually requires replicating the entire ecosystem used to train the model, most of the time with a docker. Once a model is converted into ONNX, the production environment only needs a runtime to execute the graph defined with ONNX operators. This runtime can be developed in any language suitable for the production application, C, java, python, javascript, C#, Webassembly, ARM…
 
@@ -109,24 +109,30 @@ axc = onnx.Add(ax, c)
 
 > Metadata
 
-机器学习模型会不断更新。跟踪模型版本、模型作者及其训练方式的是很重要的。ONNX 提供了在模型本身中存储附加数据的可能性。
+机器学习模型会不断更新。跟踪模型版本、模型作者及其训练方式是很重要的。ONNX 提供了在模型本身中存储附加数据的可能性。
 
 > Machine learned models are continuously refreshed. It is important to keep track of the model version, the author of the model and how it was trained. ONNX offers the possibility to store additional data in the model itself.
 
 - **doc_string：该模型的人类可读文档。**
+
   可以使用 Markdown。
 - **domain：表示模型名称空间或域的反向DNS名称，**
+
   例如，“org.onnx”
 - **metadata_props：表示为字典 `map<string,string>` 的具名元数据，**
+
   （值、键）应该是无重复的。
 - **model_author：逗号分隔的名称列表，**
+
   模型作者的个人姓名，和/或他们的组织。
 - **model_license：开源许可证的众所周知的名称或 URL**
+
   在该许可下模型是可用的。
 - **model_version：模型本身的版本，用整数编码。**
 - **producer_name：用于生成模型的工具的名称。**
 - **producer_version：生成工具的版本。**
 - **training_info：一个可选的扩展，包含**
+
   训练信息（参见[TrainingInfoProto](https://onnx.ai/onnx/api/classes.html#l-traininginfoproto)）
 
 > - doc_string: Human-readable documentation for this model.

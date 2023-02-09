@@ -4,7 +4,7 @@
 
 > [原文](https://onnx.ai/onnx/intro/index.html)
 
-本文档描述了 ONNX 的概念（开放神经网络交换格式）。它通过例子展示了如何在 python 中使用它，最后解释了在生产中迁移到 ONNX 所面临的一些挑战。
+本文描述了 ONNX 的概念（开放神经网络交换格式 Open Neural Network Exchange）。并通过例子展示了如何在 python 中使用，最后解释了要在生产中迁移到 ONNX 所面临的一些挑战。
 
 > This documentation describes the ONNX concepts (Open Neural Network Exchange). It shows how it is used with examples in python and finally explains some of challenges faced when moving to ONNX in production.
 
