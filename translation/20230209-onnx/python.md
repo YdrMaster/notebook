@@ -912,3 +912,425 @@ pprint.pprint([k for k in dir(onnx.helper)
 加载之前创建的 ONNX 文件，检查它有什么样的元数据。
 
 > Let’s load the ONNX file previously created and check what kind of metadata it has.
+
+```python
+from onnx import load
+
+with open("linear_regression.onnx", "rb") as f:
+    onnx_model = load(f)
+
+for field in ['doc_string', 'domain', 'functions',
+              'ir_version', 'metadata_props', 'model_version',
+              'opset_import', 'producer_name', 'producer_version',
+              'training_info']:
+    print(field, getattr(onnx_model, field))
+```
+
+```plaintext
+doc_string
+domain
+functions []
+ir_version 8
+metadata_props []
+model_version 0
+opset_import [version: 19
+]
+producer_name
+producer_version
+training_info []
+```
+
+其中大部分是空的，因为在创建 ONNX 图时就没有填写。其中两个有值：
+
+> Most of them are empty because it was not filled when the ONNX graph was created. Two of them have a value:
+
+```python
+from onnx import load
+
+with open("linear_regression.onnx", "rb") as f:
+    onnx_model = load(f)
+
+print("ir_version:", onnx_model.ir_version)
+for opset in onnx_model.opset_import:
+    print("opset domain=%r version=%r" % (opset.domain, opset.version))
+```
+
+```plaintext
+ir_version: 8
+opset domain='' version=19
+```
+
+*IR* 定义了 ONNX 语言的版本。Opset 定义了正在使用的算子的版本。在没有明确的情况下，ONNX 使用来自安装包的最新版本。也可以指定另一个版本。
+
+> IR defined the version of ONNX language. Opset defines the version of operators being used. Without any precision, ONNX uses the latest version available coming from the installed package. Another one can be used.
+
+```python
+from onnx import load
+
+with open("linear_regression.onnx", "rb") as f:
+    onnx_model = load(f)
+
+del onnx_model.opset_import[:]
+opset = onnx_model.opset_import.add()
+opset.domain = ''
+opset.version = 14
+
+for opset in onnx_model.opset_import:
+    print("opset domain=%r version=%r" % (opset.domain, opset.version))
+```
+
+```plaintext
+opset domain='' version=14
+```
+
+只要所有算子都按 ONNX 规定的方式定义，就可以使用任何 opset。第 5 版的 *Reshape* 算子将形状定义为输入，而不是像第 1 版那样定义为属性。opset 告诉我们在描述图时要遵循哪个规范。
+
+> Any opset can be used as long as all operators are defined the way ONNX specifies it. Version 5 of operator Reshape defines the shape as an input and not as an attribute like in version 1. The opset tells which specifications is followed while describing the graph.
+
+其他元数据可用于存储任何信息，存储关于模型生成方式的信息，用版本号来区分一个模型和另一个模型的方法。
+
+> The other metadata can be used to store any information, to store information about the way the model was generated, a way to distinguish a model from another one with a version number.
+
+```python
+from onnx import load, helper
+
+with open("linear_regression.onnx", "rb") as f:
+    onnx_model = load(f)
+
+onnx_model.model_version = 15
+onnx_model.producer_name = "something"
+onnx_model.producer_version = "some other thing"
+onnx_model.doc_string = "documentation about this model"
+prop = onnx_model.metadata_props
+
+data = dict(key1="value1", key2="value2")
+helper.set_model_props(onnx_model, data)
+
+print(onnx_model)
+```
+
+```plaintext
+ir_version: 8
+producer_name: "something"
+producer_version: "some other thing"
+model_version: 15
+doc_string: "documentation about this model"
+graph {
+  node {
+    input: "X"
+    input: "A"
+    output: "XA"
+    op_type: "MatMul"
+  }
+  node {
+    input: "XA"
+    input: "B"
+    output: "Y"
+    op_type: "Add"
+  }
+  name: "lr"
+  input {
+    name: "X"
+    type {
+      tensor_type {
+        elem_type: 1
+        shape {
+          dim {
+          }
+          dim {
+          }
+        }
+      }
+    }
+  }
+  input {
+    name: "A"
+    type {
+      tensor_type {
+        elem_type: 1
+        shape {
+          dim {
+          }
+          dim {
+          }
+        }
+      }
+    }
+  }
+  input {
+    name: "B"
+    type {
+      tensor_type {
+        elem_type: 1
+        shape {
+          dim {
+          }
+          dim {
+          }
+        }
+      }
+    }
+  }
+  output {
+    name: "Y"
+    type {
+      tensor_type {
+        elem_type: 1
+        shape {
+          dim {
+          }
+        }
+      }
+    }
+  }
+}
+opset_import {
+  version: 19
+}
+metadata_props {
+  key: "key1"
+  value: "value1"
+}
+metadata_props {
+  key: "key2"
+  value: "value2"
+}
+```
+
+*training_info* 字段可以用来存储额外的图。参见 [training_tool_test.py](https://github.com/onnx/onnx/blob/master/onnx/test/training_tool_test.py) 以了解它是如何工作的。
+
+> Field training_info can be used to store additional graphs. See training_tool_test.py to see how it works.
+
+## 子图：测试和循环
+
+> Subgraph: test and loops
+
+它们通常被归入一个叫做*控制流*的类别。通常最好避免它们，因为它们的效率不高，因为矩阵操作要快得多，而且经过优化。
+
+> They are usually grouped in a category called control flow. It is usually better to avoid them as they are not as efficient as the matrix operation are much faster and optimized.
+
+### If
+
+一个测试可以用操作符 [If](https://onnx.ai/onnx/operators/onnx__If.html#l-onnx-doc-if) 来实现。它根据一个布尔值来执行一个子图或另一个子图。这并不经常使用，因为一个函数通常需要一个批次的许多比较的结果。下面的例子是根据符号计算矩阵中所有浮点数的总和，返回 1 或 -1。
+
+> A test can be implemented with operator If. It executes one subgraph or another depending on one boolean. This is not used very often as a function usually needs the result of many comparisons in a batch. The following example computes the sum of all floats in a matrix based on the sign, returns 1 or -1.
+
+```python
+import numpy
+import onnx
+from onnx.helper import (
+    make_node, make_graph, make_model, make_tensor_value_info)
+from onnx.numpy_helper import from_array
+from onnx.checker import check_model
+from onnxruntime import InferenceSession
+
+# initializers
+value = numpy.array([0], dtype=numpy.float32)
+zero = from_array(value, name='zero')
+
+# Same as before, X is the input, Y is the output.
+X = make_tensor_value_info('X', onnx.TensorProto.FLOAT, [None, None])
+Y = make_tensor_value_info('Y', onnx.TensorProto.FLOAT, [None])
+
+# The node building the condition. The first one
+# sum over all axes.
+rsum = make_node('ReduceSum', ['X'], ['rsum'])
+# The second compares the result to 0.
+cond = make_node('Greater', ['rsum', 'zero'], ['cond'])
+
+# Builds the graph is the condition is True.
+# Input for then
+then_out = make_tensor_value_info(
+    'then_out', onnx.TensorProto.FLOAT, None)
+# The constant to return.
+then_cst = from_array(numpy.array([1]).astype(numpy.float32))
+
+# The only node.
+then_const_node = make_node(
+    'Constant', inputs=[],
+    outputs=['then_out'],
+    value=then_cst, name='cst1')
+
+# And the graph wrapping these elements.
+then_body = make_graph(
+    [then_const_node], 'then_body', [], [then_out])
+
+# Same process for the else branch.
+else_out = make_tensor_value_info(
+    'else_out', onnx.TensorProto.FLOAT, [5])
+else_cst = from_array(numpy.array([-1]).astype(numpy.float32))
+
+else_const_node = make_node(
+    'Constant', inputs=[],
+    outputs=['else_out'],
+    value=else_cst, name='cst2')
+
+else_body = make_graph(
+    [else_const_node], 'else_body',
+    [], [else_out])
+
+# Finally the node If taking both graphs as attributes.
+if_node = onnx.helper.make_node(
+    'If', ['cond'], ['Y'],
+    then_branch=then_body,
+    else_branch=else_body)
+
+# The final graph.
+graph = make_graph([rsum, cond, if_node], 'if', [X], [Y], [zero])
+onnx_model = make_model(graph)
+check_model(onnx_model)
+
+# Let's freeze the opset.
+del onnx_model.opset_import[:]
+opset = onnx_model.opset_import.add()
+opset.domain = ''
+opset.version = 15
+
+# Save.
+with open("onnx_if_sign.onnx", "wb") as f:
+    f.write(onnx_model.SerializeToString())
+
+# Let's see the output.
+sess = InferenceSession(onnx_model.SerializeToString(),
+                        providers=["CPUExecutionProvider"])
+
+x = numpy.ones((3, 2), dtype=numpy.float32)
+res = sess.run(None, {'X': x})
+
+# It works.
+print("result", res)
+print()
+
+# Some display.
+print(onnx_model)
+```
+
+```plain
+result [array([1.], dtype=float32)]
+
+ir_version: 8
+graph {
+  node {
+    input: "X"
+    output: "rsum"
+    op_type: "ReduceSum"
+  }
+  node {
+    input: "rsum"
+    input: "zero"
+    output: "cond"
+    op_type: "Greater"
+  }
+  node {
+    input: "cond"
+    output: "Y"
+    op_type: "If"
+    attribute {
+      name: "else_branch"
+      g {
+        node {
+          output: "else_out"
+          name: "cst2"
+          op_type: "Constant"
+          attribute {
+            name: "value"
+            t {
+              dims: 1
+              data_type: 1
+              raw_data: "\000\000\200\277"
+            }
+            type: TENSOR
+          }
+        }
+        name: "else_body"
+        output {
+          name: "else_out"
+          type {
+            tensor_type {
+              elem_type: 1
+              shape {
+                dim {
+                  dim_value: 5
+                }
+              }
+            }
+          }
+        }
+      }
+      type: GRAPH
+    }
+    attribute {
+      name: "then_branch"
+      g {
+        node {
+          output: "then_out"
+          name: "cst1"
+          op_type: "Constant"
+          attribute {
+            name: "value"
+            t {
+              dims: 1
+              data_type: 1
+              raw_data: "\000\000\200?"
+            }
+            type: TENSOR
+          }
+        }
+        name: "then_body"
+        output {
+          name: "then_out"
+          type {
+            tensor_type {
+              elem_type: 1
+            }
+          }
+        }
+      }
+      type: GRAPH
+    }
+  }
+  name: "if"
+  initializer {
+    dims: 1
+    data_type: 1
+    name: "zero"
+    raw_data: "\000\000\000\000"
+  }
+  input {
+    name: "X"
+    type {
+      tensor_type {
+        elem_type: 1
+        shape {
+          dim {
+          }
+          dim {
+          }
+        }
+      }
+    }
+  }
+  output {
+    name: "Y"
+    type {
+      tensor_type {
+        elem_type: 1
+        shape {
+          dim {
+          }
+        }
+      }
+    }
+  }
+}
+opset_import {
+  domain: ""
+  version: 15
+}
+```
+
+![if](dot_if_py.png)
+
+else 和 then分支都非常简单。*If* 节点甚至可以用 *Where* 节点来代替，这样会更快。当两个分支都比较大并且跳过一个分支会更有效率时，这会变得更有趣。
+
+> Both else and then branches are very simple. Node If could even be replaced with a node Where and that would be faster. It becomes interesting when both branches are bigger and skipping one is more efficient.
