@@ -66,7 +66,7 @@ r = onnx.MatMul(a, x)
 y = onnx.Add(r, c)
 ```
 
-这段代码实现了一个函数 *f(x，a，c) -> y = a @ x + c*。*x*、*a*、*c* 是**输入**，*y* 是**输出**。*r* 是一个中间结果。*MatMul* 和 *Add* 是**节点**。它们也有输入和输出。节点还有一个类型，即 [ONNX 算子库](https://onnx.ai/onnx/operators/index.html#l-onnx-operators)中的一个算子。这个图是用[一个简单的例子：线性回归]()一节中的示例构建的。
+这段代码实现了一个函数 *f(x，a，c) -> y = a @ x + c*。*x*、*a*、*c* 是**输入**，*y* 是**输出**。*r* 是一个中间结果。*MatMul* 和 *Add* 是**节点**。它们也有输入和输出。节点还有一个类型，即 [ONNX 算子库](https://onnx.ai/onnx/operators/index.html#l-onnx-operators)中的一个算子。这个图是用[一个简单的例子：线性回归](python.md#一个简单的例子线性回归)一节中的示例构建的。
 
 > This code implements a function f(x, a, c) -> y = a @ x + c. And x, a, c are the inputs, y is the output. r is an intermediate result. MatMul and Add are the nodes. They also have inputs and outputs. A node has also a type, one of the operators in ONNX Operators. This graph was built with the example in Section A simple example: a linear regression.
 
@@ -83,7 +83,7 @@ ax = onnx.MatMul(a, x)
 axc = onnx.Add(ax, c)
 ```
 
-该图可以渲染成如下的图片。右边描述了 *Add* 算子，其第二个输入被定义为一个初始化器。这个图是用这段代码构建的：[初始化器，默认值](https://onnx.ai/onnx/intro/python.html#l-onnx-linear-regression-onnx-api-init)。
+该图可以渲染成如下的图片。右边描述了 *Add* 算子，其第二个输入被定义为一个初始化器。这个图是用这段代码构建的：[初始化器，默认值](python.md#初始化器默认值)。
 
 > Visually, this graph would look like the following image. The right side describes operator Add where the second input is defined as an initializer. This graph was obtained with this code Initializer, default value.
 
