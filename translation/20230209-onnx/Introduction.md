@@ -16,10 +16,10 @@
   - [支持的类型](concepts.md#支持的类型)
   - [什么是 opset 版本？](concepts.md#什么是-opset-版本)
   - [子图、测试和循环](concepts.md#子图测试和循环)
-  - [展开性]()
-  - [函数]()
-  - [形状（和类型）推断]()
-  - [工具]()
+  - [可扩展性](concepts.md#可扩展性)
+  - [函数](concepts.md#函数)
+  - [形状（和类型）推断](concepts.md#形状和类型推断)
+  - [工具](concepts.md#工具)
 - Python 中的 ONNX
   - 一个简单的例子：线性回归
   - 序列化
