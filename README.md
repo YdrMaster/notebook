@@ -1,6 +1,8 @@
 ﻿# 笔记
 
 - [随笔](/随笔/toc.md)
+- [大模型](/大模型/toc.md)
+
 - [翻译](/translation/toc.md)
 - [`zCore`](/zCore)
   - [rCore-Tutorial-v3 lab3 笔记](/zCore/20220312-lab3.md)
