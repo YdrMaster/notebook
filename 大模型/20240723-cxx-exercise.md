@@ -347,3 +347,356 @@ a_.f();
 ## 12_class_destruct
 
 十二题是析构的问题，记住凡是调用 new 构造出来的，除非所有权被转让给了特别说明会释放对象的结构体，比如智能指针，否则一定需要调用 delete 才会释放。如果发现你的 new 和 delete 不成对，多半发生了内存泄露。所以 C++ 里安全使用内存是特别难的事，几乎只有在构造器中 new，在析构器中 delete 才能保证正确，所以写大型的 C++ 程序最好保证不在构造器里就不要 new 任何东西。
+
+另外我们看一下 new 的语法：
+
+```c++
+DynFibonacci(int capacity)
+    : cache(new size_t[capacity]{0, 1}),
+      cached(2) {}
+
+~DynFibonacci() {
+    delete[] cache;
+}
+```
+
+如果要把这里出现的 `new size_t[capacity]{0, 1}` 分解成几段，正确的分法应该是：`new / size_t[capacity] / {0, 1}`，其中：
+
+- `new` 是运算符，表示创建满足指定大小和对齐要求的内存空间；
+- `size_t[capacity]` 是类型。上节课讲过复杂声明的解读法问题，这里的基本类型+方括号是明显的省略标识符的类型声明；
+- 最后 `{0, 1}` 是初始化，表示为刚刚创建出来的存储空间填入一些值；
+
+我注意到群里有些同学不容易分清 C++ 里的小括号中括号和大括号，容易用错。这个实际上是对语法死记硬背，没搞明白语法成分的分类和分解。对于没有明显标点符号分隔的句子必须学会分解句子成分，不然就会“句读之不知，惑之不解……小学而大疑”。我这里写了 10 个例子，大家可以自己分析分析都是什么含义：
+
+1. ```c++
+   new T
+   ```
+
+2. ```c++
+   new T[c]
+   ```
+
+3. ```c++
+   new T()
+   ```
+
+4. ```c++
+   new T{}
+   ```
+
+5. ```c++
+   new T({})
+   ```
+
+6. ```c++
+   new T{{}}
+   ```
+
+7. ```c++
+   new T[]{t0, t1}
+   ```
+
+8. ```c++
+   new T[c]{t0, t1}
+   ```
+
+9. ```c++
+   new T(a0, a1)
+   ```
+
+10. ```c++
+    new T{a0, a1}
+    ```
+
+## 13_class_clone
+
+第十三题是关于拷贝的语义问题。如果将故意写错的构造器先改对或注释掉：
+
+```c++
+DynFibonacci(int capacity);//: cache(new ?), cached(?) {}
+DynFibonacci(DynFibonacci const &) = delete;
+```
+
+编译产生的编译错误是：
+
+```plaintext
+error: main.cpp
+13_class_clone\main.cpp(42): error C2280: “DynFibonacci::DynFibonacci(const DynFibonacci &)”: 尝试引用已删除的函数
+13_class_clone\main.cpp(14): note: 参见“DynFibonacci::DynFibonacci”的声明
+13_class_clone\main.cpp(14): note: “DynFibonacci::DynFibonacci(const DynFibonacci &)”: 已隐式删除函数
+
+  > in 13_class_clone\main.cpp
+```
+
+这个叫做显式弃置函数定义，也是 C++11 新增的语法。注意这个 `= delete` 就是这个构造函数的函数体，并且这样的函数体不仅可以用于类成员函数。随便举个例子：
+
+```c++
+void f() = delete;
+```
+
+这样写就是对的，不会产生编译错误。但是如果调用：
+
+```plaintext
+error: main.cpp
+13_class_clone\main.cpp(55): error C2280: “void test(void)”: 尝试引用已删除的函数
+13_class_clone\main.cpp(47): note: 参见“test”的声明
+13_class_clone\main.cpp(47): note: “void test(void)”: 已隐式删除函数
+
+  > in 13_class_clone\main.cpp
+```
+
+报错说调用已删除的函数。
+
+那么这个语法有什么实际作用呢？结合特化它就用出来了：
+
+```c++
+template<class T> T add(T const &a, T const &b) { return a + b; }
+template<> int add(int const &, int const &) = delete;
+
+...
+
+ASSERT(add(1., 2.) == 3., "add(1, 2) should be 3");
+ASSERT(add(1, 2) == 3, "add(1, 2) should be 3");
+```
+
+虽然目前还没讲到模板，可以先看个意思。这里有个函数模板 `add` 可以把任何类型的两实例加起来，但是我希望这个模板不能加 int 型，就可以通过特化弃置，在模板的函数族里挖个洞。调用的话，可以看到 int 是不能调到的。
+
+现在把复制构造器实现出来：
+
+```c++
+DynFibonacci(DynFibonacci const &others)
+    : cache(new size_t[others.cached]),
+      cached(others.cached) {
+    std::memcpy(cache, others.cache, cached * sizeof(size_t));
+}
+```
+
+实现的时候要注意 3 个点：
+
+1. 复制构造器也是构造器，记得可以用 : 初始化列表；
+2. 成员复制完了别忘了把成员的内容也复制了；我这里用的 memcpy 需要加头文件，也可以循环赋值；
+3. 复制构造器和移动构造器里的参数名字习惯上是用 others，因为是和隐式的 this 对立，但是如果觉得对于移动和复制来说 others 不直观的话也可以叫做 source 或者 origin；
+
+下面调用的时候可以看到，fib 这个对象已经填写到了 12 项，所以拷贝一个 const 应该可以直接查第 10 项，没有问题。
+
+## 14_class_move
+
+第十四题是关于移动语义。移动语义是 C++11 加入的最重要概念，可以说没有之一，在我看来比什么 lambda 或者新增容器类型都重要多了。甚至移动语义直接构成了 Rust 语言的最基础概念。但是为了解释移动语义，C++ 引入了一个特别抽象的概念叫做左值右值亡值……这个概念的自洽性我没有疑问，但是必要性和合理性我觉得存疑，所以这里就不讲细节了。我补充了很多阅读材料，需要的同学可以自己看。我们这里只说一个词：由于 C++ 引入的这套左值右值体系，C++ 里要触发移动语义，需要一个“右值引用”。
+
+抛开概念不谈，所谓一个“右值引用”，就是一个非字面量的、可变的、准备好了被移动而失效的值。
+
+这里可以对比一下 Rust 的概念。Rust 里，由于移动是一个缺省的、基础的情况，所以移动行为看起来是双向的。只要源码出现基于参数或者模式匹配的重新绑定，移动就直接发生了。
+
+但是 C++ 里的移动是非缺省的、复杂的，由 3 个阶段构成：
+
+1. 接受移动的一方先在编译时提供接收移动的渠道，也就是移动构造和移动赋值，对应自身当前状态是空白的还是非空白的；
+2. 运行时被移动的一方要转换成“右值引用”，相当于变成准备移动的状态；
+3. 右值引用传递给接收机制，移动发生；
+
+具体到这个例子里，我们先在这个移动构造器和移动赋值里打印，方便追踪行为：
+
+```c++
+DynFibonacci(int capacity)
+    : cache(new size_t[capacity]{0, 1}),
+        cached(2) {
+    std::cout << "Constructor called" << std::endl;
+}
+DynFibonacci(DynFibonacci const &others)
+    : cache(new size_t[others.cached]),
+        cached(others.cached) {
+    std::cout << "Copy constructor called" << std::endl;
+    std::memcpy(cache, others.cache, cached * sizeof(size_t));
+}
+~DynFibonacci() {
+    std::cout << "Destructor called" << std::endl;
+    delete[] cache;
+}
+DynFibonacci(DynFibonacci &&) noexcept {
+    std::cout << "Move constructor called" << std::endl;
+}
+DynFibonacci &operator=(DynFibonacci &&) noexcept {
+    std::cout << "Move assignment called" << std::endl;
+}
+```
+
+> **NOTICE** 纯粹是示例！
+
+下面这样打印看看：
+
+```c++
+std::cout << "step 0" << std::endl;
+DynFibonacci fib(12);
+std::cout << "step 1" << std::endl;
+DynFibonacci &&fib_1 = std::move(fib);
+std::cout << "step 2" << std::endl;
+DynFibonacci fib_2(fib_1);
+```
+
+顺便点进来看一下这个 `std::move` 做了什么事，可以发现它就是一个 `static_cast` 直接类型转换到右值引用，然后返回的也是右值引用。
+
+> **NOTICE** 这个实现是共识。实践中，标准库和编译器的关系是很暧昧的。虽然理论上标准库不是编译器的一部分，但是还没有什么语言的实现中，标准库和编译器不是一起分发的；同时大概也没有什么语言的实现中编译器不为标准库开洞的。但是这个 `std::move` 公认的就是这么实现，没有哪套工具链写成别的样子。
+
+大家觉得这个能会打印出什么呢？跑一下看看，会发现：
+
+```plaintext
+step 0
+Constructor called
+step 1
+step 2
+Copy constructor called
+Destructor called
+Destructor called
+```
+
+这个居然发生的还是复制构造！而且由于发生了复制，产生了两个对象，析构函数也调用了两次。会发生这个事是因为“右值引用”作为右值，无法出现在 `=` 左边。然而你直接声明等号左边要一个右值引用，C++ 编译器一句话都不说，也不警告，但是跑起来就直接给你一个左值引用。非暴力不合作了属于是。
+
+如果直接去掉 `std::move`，显然还是会调用到复制构造：
+
+```c++
+std::cout << "step 0" << std::endl;
+DynFibonacci fib(12);
+std::cout << "step 1" << std::endl;
+// DynFibonacci &&fib_1 = std::move(fib);
+std::cout << "step 2" << std::endl;
+DynFibonacci fib_2(fib);
+```
+
+所以要触发移动语义必须这样写：
+
+```c++
+std::cout << "step 0" << std::endl;
+DynFibonacci fib(12);
+std::cout << "step 1" << std::endl;
+// DynFibonacci &&fib_1 = std::move(fib);
+std::cout << "step 2" << std::endl;
+DynFibonacci fib_2(std::move(fib));
+```
+
+然后，可以看到这样的输出：
+
+```plaintext
+step 0
+Constructor called
+step 1
+step 2
+Move constructor called
+Destructor called
+Destructor called
+```
+
+可以看到，这里重载决议触发了移动构造器。但是还是发生了两次析构。这是因为 C++ 中，一个被移动的对象处于什么状态到今天也没一个明确的说法。在 [cppreference](https://zh.cppreference.com/w/cpp/language/move_constructor) 中是这样描述的：
+
+> 典型的移动构造函数“窃取”实参曾保有的资源（例如指向动态分配对象的指针，文件描述符，TCP 套接字，输入输出流，运行的线程，等等），而非复制它们，并使它的实参遗留在**某个合法但不确定的状态**。例如，从 `std::string` 或从 `std::vector` 移动可以导致实参被置为空。但是**不应该依赖此类行为**。对于**某些类型**，例如 `std::unique_ptr`，移动后的状态是完全指定的。
+
+这就是说，C++ 仅仅约定了移动构造应该比复制对象更轻量，但是具体做什么事完全是实现自己决定的。*典型*的移动构造函数这么干，那非典型的移动构造函数可不可以比复制还慢还重呢？至少这样做不是未定义的行为。以及被移动之后的对象要怎么处理，也没有统一的规范。有时候是可以复用的，比如说一个对象容器，从中移走了一项，为了避免对容器本身大动干戈，触发了什么 O(n) 复杂度的增删移动操作，最好是能再从别的地方移动来一个东西复用这个对象。但是如果是栈上对象被移动了，那复用它一般就没有什么好处，可能仅仅是节约一些栈空间。但是即使不复用它，由于编译器无法确认这个对象是不是已经移动干净了，能不能直接析构，所以通常来说编译器也不敢直接复用这块栈空间干别的事。也就是说，有时候 Rust 的一些行为和语义更明确，能做的优化也更深，这就是为什么有时候 Rust 程序性能比 C++ 的还要高。
+
+接下来我们正式开始实现移动构造和移动赋值。先看移动构造：
+
+```c++
+DynFibonacci(DynFibonacci &&others) noexcept
+    : cache(others.cache),
+      cached(others.cached) {
+    std::cout << "Move constructor called" << std::endl;
+    others.cache = nullptr;
+    others.cached = 0;
+}
+```
+
+通过实现移动构造，同学们可以理解移动语义的好处在哪。显然，现在不需要重新分配空间，然后把 cache 的内容整个复制一遍了，只需要复制一个指针。注意 3 点：
+
+1. 移动构造器也是构造器，记得可以用 : 初始化列表；
+2. 移动之后记得把原对象标记到你选择的**合法但不确定的状态**，不一定要写 0 和空指针，但至少要和被移走的资源断开联系，以免出现争用和重复释放问题；
+3. 注意这后面有个 noexcept，意思是说这个函数绝不抛出异常。这个东西是和 C++ 异常体系联系的，这个体系本来就十分扭曲，推荐完全不用就完事了。C++ 约定了移动构造和移动赋值不应该抛异常，所以直接挂上就行；
+
+> 同样地，如果不喜欢 `others` 这个参数名可以换成别的。
+
+使用 : 初始化列表实现移动构造有一个缺陷，就是复制 others 的字段和断开资源连接不得不分开写，所以对于简单但是非默认的移动构造比较推荐用一个标准库函数叫做 [`std::exchange`](https://zh.cppreference.com/w/cpp/utility/exchange) 的，写成这样：
+
+```c++
+DynFibonacci(DynFibonacci &&others) noexcept
+    : cache(std::exchange(others.cache, nullptr)),
+      cached(std::exchange(others.cached, 0)) {
+    std::cout << "Move constructor called" << std::endl;
+}
+```
+
+> **NOTICE** `std::exchange` 可能需要 `#include <utility>`。
+
+这样移动的语义看起来更明确一些。
+
+接下来实现移动赋值。首先注意，移动赋值是一种运算符重载。关于运算符重载的语法可以看上方的阅读材料。关于运算符重载的实现，关键点是 3 个：
+
+1. `operator` 关键字 + 要重载的符号做为函数标识符；
+2. 参数和返回类型要写对，具体每个运算符写成什么算对，请勤于查文档，这么多运算符真记不住；
+3. 有许多看起来不像一般意义上的运算符的东西，实际上都是运算符，都能重载。比如这里的赋值运算符 `=`；还有之前提过的类型转换，类型转换是一个单目运算符，可以重载；还有访问指针成员的 `->`，调用函数的小括号，都算运算符，都能重载；以及左边的 ++ -- 和右边的 ++ --，可以分别重载成不一样的；具体这些东西都怎么重载，大家可以自己查文档，有些并没有那么直觉。
+
+这个题目里移动赋值重载的签名已经写好了，注意参数是右值引用，返回值是左值引用，这里固定写自己。整体实现：
+
+```c++
+DynFibonacci &operator=(DynFibonacci &&others) noexcept {
+    ~if (this != &others) {
+        std::cout << "Move assignment called" << std::endl;
+        delete[] cache;
+        cache = std::exchange(others.cache, nullptr);
+        cached = std::exchange(others.cached, 0);
+    } else {
+        std::cerr << "Warning: self-assignment detected" << std::endl;
+    }
+    return *this;
+}
+```
+
+移动赋值起手，直接判断不是移动到自己。这些全是约定：
+
+1. 移动到自己是无法避免的，虽然直接写是警告行为但动态条件下编译器不能发现；
+2. 移动到自己会怎么样是实现决定的，实践中大家倾向于什么也不做，但是根据业务也可以干别的事。无论如何不判断一定是不对的；
+
+如果不是移动到自己，记得干两件事：
+
+1. 释放原本 this 持有的资源；
+2. 做移动构造同款操作；
+
+注意移动赋值是左值也现存右值也现存的情况，所以一旦右值移动到左值，左值原来的内容就被覆盖了，所以要在覆盖之前直接释放。所以一个移动赋值实际上基本上等价于先在 this 上原地析构，再调用移动构造。而且 Rust 就是这么实现的。C++ 需要开发者自己去写这个逻辑；
+
+最后记得 `reture *this`。运行：
+
+```plaintext
+Constructor called
+Move constructor called
+Constructor called
+Constructor called
+Move assignment called
+Warning: self-assignment detected
+Destructor called
+Destructor called
+Destructor called
+Destructor called
+```
+
+移动到自己检测出来了。以及注意声明了 4 个对象一定调用 4 个析构，被移动的对象也要析构。
+
+另外，我注意到有人会在析构里写这种代码：
+
+```c++
+~DynFibonacci() {
+    if (cache) delete[] cache;
+}
+```
+
+这是没有必要的。删除/释放空指针定义上就是什么都不做，不需要自己判断。
+
+## 15 class_derive
+
+第十五题是类派生。这个题主要是提醒大家继承和派生的时候字段是什么关系。可以看到 X 里有一个 int，A 里有一个 int，然后 B 继承 A 同时持有一个 X。那么它们各自多大呢？
+
+显然 X 和 A 都是一个 int 那么大。同时注意方法是不占体积的，因为方法本质上就是函数指针类型的类静态常量成员，作为静态成员存储不会占用堆栈段空间。
+
+那么 B 的大小是多少呢？对于字段来说，实际上持有 A 和继承 A 是一回事，所以 B 的大小就是 X + A = 2 x int。注意两个 int 除了写成 `sizeof(int) * 2`，还可以这么写：
+
+```c++
+static_assert(sizeof(X) == sizeof(int), "There is an int in X");
+static_assert(sizeof(A) == sizeof(int), "There is an int in A");
+static_assert(sizeof(B) == sizeof(int[2]), "B is an A with an X");
+```
+
+其实对于复杂类型的数组更推荐这么写。
