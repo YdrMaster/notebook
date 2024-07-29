@@ -206,24 +206,24 @@ println!(
 
 ## 表达式、代码块，以及函数
 
-Rust 是一种主要基于表达式的语言，源码中几乎所有东西都可以解释为表达式或变形/省略的表达式。
+[Rust 是一种主要基于表达式的语言](https://doc.rust-lang.org/reference/statements-and-expressions.html)，源码中几乎所有东西都可以解释为表达式或变形/省略的表达式。
 
 表达式可以求值。对表达式求值会产生一个值，同时产生一些副作用，这些副作用就是程序的效果。
 
-其中有一种表达式叫做代码块，形式是一对大括号包围的一串语句（但不是所有大括号都表示代码块）。代码块中的内容是一串语句，这意味着语句是有顺序的。
+其中有一种表达式叫做[代码块表达式](https://doc.rust-lang.org/reference/expressions/block-expr.html)，形式是一对大括号包围的一串语句（但不是所有大括号都表示代码块）。代码块中的语句是有顺序的，这个顺序就是效果发生的拓扑序。
 
 语句分为两种，声明语句和表达式语句。
 
-声明语句可以声明类型、函数、宏等语法结构，这些声明和模块中的声明一致；声明语句还可以以 let 开始声明变量，或者以 let 开始触发一次模式匹配。如果触发的模式匹配是绝对的，就以 `;` 结尾，如果是可反驳的（*refutable*），就以 `else` 代码块 `;` 结尾。
+[声明语句](https://doc.rust-lang.org/reference/statements.html#declaration-statements)可以声明类型、函数、宏等语法结构，这些声明和模块中的声明一致，包括行为也一致。所以这种声明只关心作用域，作用域满足的条件下可以先使用后声明。声明语句还可以以 let 开始触发一次模式匹配。如果触发的模式匹配是绝对的，就以 `;` 结尾，如果是可反驳的（*refutable*），就以 `else` + *代码块表达式* + `;` 结尾。
 
 表达式语句就是一个表达式。又有 3 种情况：
 
-1. 表达式语句的表达式是控制流表达式，且值是 `()`，则不需要以分号结尾；
+1. 表达式是控制流表达式，且值是 `()`，则不需要以分号结尾；
    控制流表达式就是最经典的、高考要靠的计算流程结构，包括顺序、循环、判断。
 
    - 顺序就是代码块表达式；
-   - 循环包括 `for`、`while` 和 `loop`；
-   - 判断包括 `if` 和 `match`；
+   - [循环](https://doc.rust-lang.org/reference/expressions/loop-expr.html)包括 `for`、`while` 和 `loop`；
+   - 判断包括 [`if`](https://doc.rust-lang.org/reference/expressions/if-expr.html) 和 [`match`](https://doc.rust-lang.org/reference/expressions/match-expr.html)；
 
 2. 表达式语句是代码块的最后一个语句，则不需要以分号结尾，以其值作为代码块表达式的值；
 3. 以上两种情况都不是，则表达式必须以 `;` 结尾，此时其值被忽略。这种语句的目标是其求值过程产生的效果；
@@ -253,7 +253,9 @@ if 表达式的功能是判断。如果：
 4. -> 返回值类型，如果类型为 `()` 可以省略；
 5. 一个代码块表达式作为函数体；
 
-综上所述，由于[函数体就是一个代码块表达式](https://doc.rust-lang.org/reference/items/functions.html#function-body)，所以完全遵循代码块表达式的形式。即包含一串语句，并以最后一个语句的值作为返回值。但是在代码块表达式做函数体时额外允许 return + 表达式的语句，表示以这个表达式的值为返回值并忽略后续语句。
+综上所述，由于[函数体就是一个代码块表达式](https://doc.rust-lang.org/reference/items/functions.html#function-body)，所以完全遵循代码块表达式的形式。即包含一串语句，并以最后一个语句的值作为返回值。另外在代码块表达式做函数体时额外允许 [return 表达式](https://doc.rust-lang.org/reference/expressions/return-expr.html)，表示以这个表达式的值为返回值并忽略后续语句。
+
+上述各种表达式在 Reference 中都有自己的专题，共有 19 种大类。考虑到这 19 种是 Rust 这样一种复杂的高级语言表达式种类的总量，还是相当少的。推荐大家都去把 Reference 的这个部分过一遍。
 
 ## 切片 \[T\]
 
@@ -263,11 +265,13 @@ if 表达式的功能是判断。如果：
 
 要进一步解释这个“片”就再看英英释义，很容易关注到第二项含义指出在信息领域，slice 表示“a part or share of something”。到这里对应到 Rust 就很顺畅了。Rust 中，得到一个切片最常见的情况是从一个数组或者动态数组 `Vec` 里用一个 Range 划定一个范围得到，所以它是 part；得到之后，切片共享了源数组的存储空间、所有权、可变性，所以它是一个 share。
 
+关于[切片类型](https://doc.rust-lang.org/reference/types/slice.html) 额外多说一点。我们日常说的切片都是带有引用的切片，但是切片类型在定义上实际是不带引用的 `[T]`。上节课我们已经讲了引用类型本质就是指针，而切片的引用 `&[T]` 本质是占用两个指针宽度的胖指针。而切片类型本身在定义上是胖指针指向的那一段存储区域，所以它是一个*不定长类型*。不定长类型是无法在栈上表示的类型，只能以胖指针形式存在于引用、裸指针或智能指针中，所以日常不是很常见。关于不定长类型的具体信息我们今天讲到特质再涉及，
+
 ## as
 
-关于使用 as 转换类型，有同学在问卷里问到为什么 as 转型不是一步到位的，经常出现一串 as as as。这是因为 as 转型的原类型和目标类型是有限的种类，我们可以查阅 [Rust Reference](https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions) 找到能转型的类型对。
+关于使用 as 转换类型，有同学在问卷里问到为什么 as 转型不是一步到位的，经常出现一串 as as as。这是因为 as 转型的原类型和目标类型是有限的种类，[Reference](https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions) 中可以找到能转型的类型对。
 
-其实最常见的一串 as 是因为引用到指针再由指针到另一个类型的指针。可以看到使用 as 做引用到指针的转换是不能同时转型的，要转型就需要再 as 一次。或者我想把这个引用转换成一个表示地址的整数，也需要二次 as。
+其实最常见的一串 as 是因为引用到指针，再由指针到另一个类型的指针。可以看到使用 as 做引用到指针的转换是不能同时转型的，要转型就需要再 as 一次。或者我想把这个引用转换成一个表示地址的整数，也需要二次 as。大家可以把这个转型关系画成图或者有限状态机，这样可以通过子图结构来分析一串 as 是否可以简化，或者发现使用 as 的最简最长路径有多长。
 
 ## 常量
 
@@ -408,8 +412,180 @@ fn main() {
 
 ### Drop
 
+Drop 对应的是 C++ 中的析构，是所有权机制的重要组成部分。它是少数在 Reference 中也有词条的特质，但是详细信息还要看标准库文档的相关章节。标准库有一个模块叫做 [`std::ops`](https://doc.rust-lang.org/std/ops/index.html#traits)，这个模块是和语法联系最紧密的章节，因为其中的所有特质都用于运算符重载或者其他语法行为扩展能力。[Drop](https://doc.rust-lang.org/std/ops/trait.Drop.html) 特质也定义在这个模块中。
+
+看文档我们可以发现，Rust 把这个特质就定义为析构。当值离开作用域或者其他原因不再需要的时候会自动调用。这里的“不再需要”是非常自然语言的说法，其实用 Rust 语言的说法就是不再有任何其他东西对值拥有所有权。这里还提到，不能主动调用 Drop::drop，以及 Copy 和 Drop 特质是互斥的。
+
+我这里稍微修改了它的例子来展示一下离开代码块作用域时对象的析构顺序。
+
+> 实际上如果没有执行环境也可以直接用 Playground 跑，也可以改代码，但是不如本地看起来漂亮。
+
+```rust
+struct HasDrop(i32);
+
+struct HasTwoDrops {
+    one: HasDrop,
+    two: HasDrop,
+}
+
+impl Drop for HasDrop {
+    fn drop(&mut self) {
+        println!("Dropping a {}", self.0);
+    }
+}
+
+impl Drop for HasTwoDrops {
+    fn drop(&mut self) {
+        println!("Dropping ({}, {})", self.one.0, self.two.0);
+    }
+}
+
+fn main() {
+    let _01 = HasTwoDrops {
+        one: HasDrop(0),
+        two: HasDrop(1),
+    };
+    let _23 = HasTwoDrops {
+        one: HasDrop(2),
+        two: HasDrop(3),
+    };
+    println!("Running!");
+}
+```
+
+可以看到：
+
+```plaintext
+Running!
+Dropping (2, 3)
+Dropping a 2
+Dropping a 3
+Dropping (0, 1)
+Dropping a 0
+Dropping a 1
+```
+
+调用析构的时机是离开代码块作用域的最后一个语句求值之后。调用顺序是从外到内的。其中栈上对象是后声明先释放，这个也很合理，因为栈嘛，就是后进先出。然后结构体成员递归释放的顺序是先声明先释放。这个顺序是明确说的，所以想不到怎么会出现依赖释放顺序的行为，但是依赖释放顺序的行为不是未定义行为。
+
+这个递归调用的释放还提醒一点：Drop 实现的行为是默认行为之外的额外释放行为，实现特质的结构执行了 drop 之后，其中的每个成员还是要执行自己的释放流程的，从而保证所有东西一定都被释放了。这个就是为什么 drop 的接口是 `&mut self`，而不是 `self`。如果 `self` 被移走，成员就无法再释放了。
+
+最后 Drop 特质还可以用于了解对象的声明周期。比如我修改 `main`：
+
+```rust
+fn main() {
+    let _01 = HasTwoDrops {
+        one: HasDrop(0),
+        two: HasDrop(1),
+    };
+    let _23 = HasTwoDrops {
+        one: HasDrop(2),
+        two: HasDrop(3),
+    };
+    let _01 = HasTwoDrops {
+        one: HasDrop(1),
+        two: HasDrop(0),
+    };
+    println!("Running!");
+}
+```
+
+用另一个 01 来遮蔽上面的 01，并且改成 (1,0) 来区分：
+
+```plaintext
+Running!
+Dropping (1, 0)
+Dropping a 1
+Dropping a 0
+Dropping (2, 3)
+Dropping a 2
+Dropping a 3
+Dropping (0, 1)
+Dropping a 0
+Dropping a 1
+```
+
+可以看到被遮蔽的对象生命周期并没有缩短，还是活到最后才释放，而且释放顺序是最后遮蔽的变量最先释放。如果把 01 改成 mut 然后重新绑定呢：
+
+```rust
+fn main() {
+    let mut _01 = HasTwoDrops {
+        one: HasDrop(0),
+        two: HasDrop(1),
+    };
+    let _23 = HasTwoDrops {
+        one: HasDrop(2),
+        two: HasDrop(3),
+    };
+    _01 = HasTwoDrops {
+        one: HasDrop(1),
+        two: HasDrop(0),
+    };
+    println!("Running!");
+}
+```
+
+```plaintext
+Dropping (0, 1)
+Dropping a 0
+Dropping a 1
+Running!
+Dropping (2, 3)
+Dropping a 2
+Dropping a 3
+Dropping (1, 0)
+Dropping a 1
+Dropping a 0
+```
+
+可以看到绑定的一刻原来的值被立即释放了，新的值直接占据原来值的位置，同时释放顺序也按原来标识符的声明顺序，不会因为这个值重新绑定修改顺序。
+
 ### Clone/Copy
+
+[Clone](https://doc.rust-lang.org/reference/special-types-and-traits.html?highlight=clone#clone) 和 [Copy](https://doc.rust-lang.org/reference/special-types-and-traits.html?highlight=clone#copy) 也都是 Reference 中有词条的特质。
+
+其中 Copy 特质要求 Clone 作为前置条件。前置条件在参考里叫做超特质（*supertrait*），但是这个名太抽象了，其实就是前置条件的意思，必须先实现 Clone 才能实现 Copy。
+
+但是实际上 Rust 并不要求 Clone 和 Copy 行为一致，比如这个例子：
+
+```rust
+struct S {}
+impl Clone for S {
+    fn clone(&self) -> Self {
+        println!("Cloning S");
+        Self {}
+    }
+}
+impl Copy for S {}
+
+fn main() {
+    let _s = S {};
+    let _ss = _s.clone();
+    let _sss = _ss;
+}
+```
+
+可以看到 Clone 会打印，Copy 并不会。
+
+Reference 中明确提到，Copy 的作用方式是修改赋值时的语义。也就是说这个例子里，绑定 _ss 和_sss 都没有消耗调源对象，所以最后 3 个对象都可以继续使用。这也是为什么这些特质需要在 Reference 中有词条。
+
+Clone 和 Copy 更一般的用法是 derive 出来。Rust 可以利用过程宏自动为类型实现 Clone 和 Copy 的实现代码。
 
 ### Debug/Display
 
+[Debug](https://doc.rust-lang.org/std/fmt/trait.Debug.html) 和 [Display](https://doc.rust-lang.org/std/fmt/trait.Display.html) 也是非常常用的特质，它们属于标准库的 `std::fmt` 模块，是纯粹的库功能，在参考文档中不存在。
+
+这两个是用来格式化显示类型的。其中 Debug 可以 derive 自动生成，一般也推荐使用自动生成的版本。这种会直接模式化地显示结构体每个字段的细节。Display 不能自动生成，一般用于更美观、更利于人类阅读的格式。
+
+> **NOTICE** 文档明确提到，实现 Display 会自动实现 ToString，所以一般都推荐实现 Display 而不是 ToString。以及从这个设定可以看出 Display 是干什么用的。
+
+格式串中，`{}` 调用 Display，`{:?}` 调用 Debug。以及 [std::fmt 模块](https://doc.rust-lang.org/std/fmt/index.html#traits) 还有其他 trait 用于不同类型的格式化。
+
 ### 迭代器
+
+最后一个要讲的重要特质是迭代器。迭代器系统包括 3 个特质：
+
+1. 迭代器本体 Iterator；
+2. 转换迭代器 IntoIterator；
+3. 收集器 FromIterator；
+
+> **NOTICE** 关于 Rust 中的类型转换，有 3 个常用词，as、to 和 into。其中 as 并表示转换表示，意味着成本极低的转换，比如直接转换指针类型；to 表示成本较高的转换，比如需要分配、需要拷贝大块内存或者需要其他计算，例如 ToString；Into 表示转换时会消费掉原对象的转换，一般意味着这个转换可以移动原有的资源来避免拷贝。
