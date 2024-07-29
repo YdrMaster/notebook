@@ -584,8 +584,20 @@ Clone 和 Copy 更一般的用法是 derive 出来。Rust 可以利用过程宏�
 
 最后一个要讲的重要特质是迭代器。迭代器系统包括 3 个特质：
 
-1. 迭代器本体 Iterator；
-2. 转换迭代器 IntoIterator；
-3. 收集器 FromIterator；
+1. 迭代器本体 [Iterator](https://doc.rust-lang.org/std/iter/trait.Iterator.html)；
+2. 转换迭代器 [IntoIterator](https://doc.rust-lang.org/std/iter/trait.IntoIterator.html)；
+3. 收集器 [FromIterator](https://doc.rust-lang.org/std/iter/trait.FromIterator.html)；
+
+> **NOTICE** 还有其他更复杂的迭代器特质，一般都是依赖迭代器特质的高级特质，不一一介绍。可以查阅标准库 [std::iter 模块](https://doc.rust-lang.org/std/iter/index.html#traits)。
 
 > **NOTICE** 关于 Rust 中的类型转换，有 3 个常用词，as、to 和 into。其中 as 并表示转换表示，意味着成本极低的转换，比如直接转换指针类型；to 表示成本较高的转换，比如需要分配、需要拷贝大块内存或者需要其他计算，例如 ToString；Into 表示转换时会消费掉原对象的转换，一般意味着这个转换可以移动原有的资源来避免拷贝。
+
+先讲迭代器特质。为一个类型实现迭代器特质，表示这个类型本身是迭代器。实现迭代器特质需要填写两个东西，一个是之前跳过的特质关联类型。Item 表示迭代器会迭出来的对象类型；一个是 next 方法，返回一个可空的 Item 类型的值。文档上有[实现迭代器的示例](https://doc.rust-lang.org/std/iter/index.html#implementing-iterator)。
+
+注意到，迭代器的 next 方法需要一个可变的 self。这是因为迭代器的进度是由迭代器自己保存的，每次调用 next 迭代器要修改自己的状态表示进度推进，这意味着迭代器是否完结是本身控制的，很容易实现无限长的迭代器。迭代器一般用 `Option::Some` 来表示正常迭代，用 `Option::None` 表示迭代完成，所以一般调用 next 的情况是一开始都是 Some，一旦出现 None，则意味着以后都是 None，但这个性质本质上是实现决定的。如果实现认为可以在 None 之后重新迭出 Some，不属于错误。
+
+IntoIterator 特质是 for 循环的核心特质，for 循环本质上几乎就是一个宏，除了在 for 的代码块表达式中支持 break 和 continue 表达式。Reference 上有 for 展开到 IntoIterator 的代码。
+
+FromIterator 特质是 collect 方法的基础结构。
+
+不仅是一般意义上的容器类型实现了 FromIterator 和 IntoIterator，Option 和 Result 也实现了。这个设定和函数式编程的一些概念有关。由于这样的实现，Option 和 Result 如同容器类型一样支持 map filter 变换，以及 collect 生成。
