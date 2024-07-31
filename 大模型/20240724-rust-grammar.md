@@ -596,8 +596,243 @@ Clone 和 Copy 更一般的用法是 derive 出来。Rust 可以利用过程宏�
 
 注意到，迭代器的 next 方法需要一个可变的 self。这是因为迭代器的进度是由迭代器自己保存的，每次调用 next 迭代器要修改自己的状态表示进度推进，这意味着迭代器是否完结是本身控制的，很容易实现无限长的迭代器。迭代器一般用 `Option::Some` 来表示正常迭代，用 `Option::None` 表示迭代完成，所以一般调用 next 的情况是一开始都是 Some，一旦出现 None，则意味着以后都是 None，但这个性质本质上是实现决定的。如果实现认为可以在 None 之后重新迭出 Some，不属于错误。
 
-IntoIterator 特质是 for 循环的核心特质，for 循环本质上几乎就是一个宏，除了在 for 的代码块表达式中支持 break 和 continue 表达式。Reference 上有 for 展开到 IntoIterator 的代码。
+IntoIterator 特质是 for 循环的核心特质，for 循环可以理解成一个伪装成语法的宏，Reference 上有 [for 展开到 IntoIterator](https://doc.rust-lang.org/reference/expressions/loop-expr.html#iterator-loops) 的代码，通过展开到 loop 循环和 break 实现了 for 的语义。观察 IntoIterator 的约束，可以发现其功能是将一个不隐含状态的容器，转换为一个隐含状态的迭代器对象。所以当我们写出这样的代码：
 
-FromIterator 特质是 collect 方法的基础结构。
+```rust
+for x in vec {
+    ...
+}
+```
 
-不仅是一般意义上的容器类型实现了 FromIterator 和 IntoIterator，Option 和 Result 也实现了。这个设定和函数式编程的一些概念有关。由于这样的实现，Option 和 Result 如同容器类型一样支持 map filter 变换，以及 collect 生成。
+应当注意到迭代不是发生在 vec 上的，而是 vec 已经转换成了另一个会逐步瓦解的容器。每次迭代，这个容器就分割其第一个成员，直到为空。并且这个容器也是有自己的 pub 类型的，只不过日常没有机会直接构建和传递这个类型，所以不容易发现。如果实践中我们需要自己实现一个可迭代对象，就会发现这一套代码还是相当麻烦的。这里我们看 3 个例子：
+
+第一个是标准库中最常用的 `Vec` 类型，但我们点进它所在的模块 [`std::vec`](https://doc.rust-lang.org/std/vec/index.html)，会发现这个模块里定义了 5 个结构体，其中有 3 个是特异性迭代修饰器，先不管它们，很容易找到其中 2 个核心的结构体，一个是这个模块的主题 `Vec`，还有一个 `IntoIter` 类型。可以发现这个 `IntoIter` 就是为了实现 `IntoIterator` 特质准备的。当调用 `IntoIterator::into_iter` 的时候，或者直接 `for x in vec` 的时候，实际上原来的 `Vec` 立即消灭了，转化为这个结构体，而这个结构体是满足迭代器约束的，因此可以调用 `Iterator::next` 循环。如果返回去看 `Vec` 的话，会发现 `Vec` 并没有实现迭代器。
+
+但是刚才已经讲到，`Into` 转换是消耗原对象的转换，`Vec` 循环的时候会被消耗，不能再引用了：
+
+```rust
+let vec = vec![1, 2, 3];
+for x in vec {
+    println!("{x}");
+}
+let one = &vec[0]; // Error
+```
+
+但是这么做太奢侈了，一般常见的情况还是在循环之后我希望容器仍然存在，我可以继续做别的用处。这种情况代码会自然地写成：
+
+```rust
+for x in &vec {}
+```
+
+或
+
+```rust
+for x in &mut vec {}
+```
+
+对应不可变的和可变的情况。这个操作实际上是基于自动解引用的语法以及解引用转型特质 `Deref`。这个 `&vec` 实际上是 `&*vec` 的省略。注意这些 `&` 和 `*` 并不是随便乱写，可以随便消掉的，比如这个 `vec` 前面最多只能有一个 `*`，再多是报错的。转型特质我们没讲，但是 rustlings 题目里是有的，相信到这个阶段大家都差不多做到了。总之，这个 for 循环看起来是对 vec 的引用循环，实际上 vec 已经默默转换成了切片的引用。如果我们再来看标准库中记录的[切片类型](https://doc.rust-lang.org/std/primitive.slice.html#impl-IntoIterator-for-%26%5BT%5D)，可以发现切片的 IntoIterator 特质本身就是对切片引用实现的，而任何类型的引用，由于它们本质是一个或两个指针长度的定长结构体，它们是自动获得 Copy 的。直接看标准库文档的 [Copy](https://doc.rust-lang.org/std/marker/trait.Copy.html#when-can-my-type-be-copy) 页面，这里也明确说了所有的引用，无论指向什么类型的数据都自动具有 Copy，而 Copy 的功能是将移动语义修改为逐字节拷贝语义，因此对切片引用进行 `IntoIterator::into_iter` 操作不会消耗掉切片，因此这个语法成立。
+
+还记得吗？我们说要举 3 个迭代器的例子。关于 `Vec` 的 for 循环行为的例子是第一个。第二个例子我们看另一个无法转换成切片的类型，比如最经典的 Rust 实现链表。这个 Rust 写链表属于经典老番，但是一方面标准库有实现好的可以直接用，另外一方面现代计算机几乎没有任何场景真的用到链表，所以我觉得 Rust 写链表麻烦是应该的。抽象肯定要为工程上更有意义的场景服务，对于链表这种实践上无意义的功能，自然没必要去为它设计抽象，那么自然写起来就麻烦。在 for 语法上大家应该可以发现 Rust 团队绝对不是那种不考虑可读性不考虑开发手感的，实现链表手感差这是个 feature，不是 bug。
+
+说回链表，同样在标准库的 [std::collections::linked_list](https://doc.rust-lang.org/std/collections/linked_list/index.html) 模块文档，可以找到为链表定义的结构体。现在我们有了 4 个结构体了。显然，链表不是基于数组实现的，所以也就无法轻松转化为切片，所以也就无法复用切片的迭代器。所以链表以及除 `Vec` 之外所有动态容器都有自己的 `IntoIter`、`Iter` 和 `IterMut` 结构体。比如我们随便点看别的看，只多不少。
+
+所以如果说诟病 Rust 写什么东西麻烦，写链表麻烦不是问题，写这东西麻烦才是问题。但是如果你尝试用 C++ 写个自定义容器就会发现更麻烦。因为 C++20 有 Concept 之前容器和迭代器的约束甚至无法到达语法层次，而是约定……所以写自定义迭代器的时候程序员会有一种无助感，你会感到编译器完全是袖手旁观的姿态，然后编译的时候再来嘲笑你写的不是迭代器，但是问它什么是迭代器它也不说。总之在 Rust 里实现自定义容器还算是进阶技巧，C++ 里我根本不试图讲。
+
+第三个例子是临时迭代器。当我们写基于范围的 for 循环的时候：
+
+```rust
+for i in 0..100 {
+    println!("{i}");
+}
+```
+
+其实深入进去可以发现，这个写法成立并不是因为编译器针对范围开了什么特效，而是因为 Range 也具有某种迭代器特质。
+
+[std::iter](https://doc.rust-lang.org/std/iter/index.html) 模块里还有几个函数可以直接构造出不基于容器的迭代器，例如 [from_fn](https://doc.rust-lang.org/std/iter/fn.from_fn.html) 可以基于一个函数或者匿名函数构造出一个迭代器，比如这个例子。
+
+那么范围和这个 [FromFn](https://doc.rust-lang.org/std/iter/struct.FromFn.html) 结构体同样是可以 for 的，它们满足 IntoIterator 吗？点进去可以发现并不是，它们实现的是 Iterator，迭代器特质，而不是转换迭代器特质。这其实非常合理。Rust 文档是链接源码的，直接查看 FromFn 源码，发现它作为迭代器，next 就是直接调用一下自己的函数，状态是存储在函数内部的（严格地说，函数不能有状态，状态是存储在闭包内部的）。那么为什么它也能 for 循环呢？
+
+这个叫做特质自动实现。在 [IntoIterator](https://doc.rust-lang.org/std/iter/trait.IntoIterator.html#impl-IntoIterator-for-I) 的文档中可以找到这样一句话：
+
+```rust
+impl<I> IntoIterator for I
+where I: Iterator {
+    type Item = <I as Iterator>::Item
+    type IntoIter = I
+}
+```
+
+这个句子我们可以直接顺着读：
+
+```plaintext
+实现 IntoIterator 为 I 当 I 满足 Iterator 的约束。
+```
+
+或者把它调整为中文语序的推理描述：
+
+```plaintext
+任取 I，当 I 满足 Iterator 约束，则为 I 实现 IntoIterator.
+其 Item 是 I 作为 Iterator 的 Item，其 IntoIter 是 I 本身。
+```
+
+这就是为什么迭代器也可以被 for 循环。实际上可以尝试其他迭代器：
+
+```rust
+let vec = vec![1, 2, 3];
+let iter = vec.iter();
+for x in iter {
+    println!("{x}");
+}
+```
+
+会发现这件事十分顺畅。这个功能本身也是 Rust 特质系统灵活性的一个重要来源。但是要注意的是，一个特质只能有一个自动实现机会，这个机会本身可能是一种稀缺资源。解释一下什么叫只能有一个机会，以及为什么会这样：
+
+```rust
+trait T {}
+trait U {}
+trait V {}
+
+impl<X> T for X where X: U {}
+impl<X> U for X where X: V {}
+
+impl<X> T for X where X: V {} // Error
+```
+
+注意，读这种代码，不要把它当作 Rust 来读，那样读一读脑子就乱了。把这个话当成英语甚至当成汉语来读。这个代码读作：
+
+```plaintext
+有三种特质 T、U 和 V。
+任取 X 满足 U，则为 X 实现 T。
+任取 X 满足 V，则为 X 实现 U。
+任取 X 满足 V，则为 X 实现 T。
+```
+
+当作汉语来读这个东西并不复杂。容易发现这里存在逻辑矛盾。假设 X 同时满足 U 和 V，那么它就有两种不同的途径实现 T 了，那么当我把 X 视作 T 的时候，我应该获得哪个途径呢？这是逻辑不能接受的。其实这就是非常经典的菱形继承问题的一种变体。
+
+然后我们在观察 IntoIterator 的过程中，还可以发现一个奇怪的现象，就是 IntoIterator 不但给 slice、Vec、HashMap 这样明显是容器的东西实现了，还给一些不太像容器的东西实现了。我指的是这里的 Option 和 Result。如果点进 [std::option](https://doc.rust-lang.org/std/option/index.html#structs) 模块看，也可以发现实现方法和其他非有序的容器是很一致的，它也有自己对应的 Iter、IterMut 和 IntoIter 结构体。
+
+要理解这个行为，同样应该从逻辑上，而不应该从程序的角度。从程序的角度，Option 和迭代器就是完全无关的类型，在 C++ 和其他语言里也有可空类型和迭代器，但是它们很少有把这两个东西联系在一起的。但是如果从逻辑上，这个行为不难理解。所谓容器就是一堆东西，数学点说就是 0 个或任意多个东西。那么 Option 其实就是 0 个或 1 个东西的意思，那么既然只有一项的数组可以迭代，Option 也可以迭代就合理了。
+
+以上就是关于 IntoIterator 这个特质要讲的内容。
+
+最后是和 IntoIterator 对立的 FromIterator。在 Rust 里，From 和 Into 是反义词。比如有两个特质本身就叫 From/Into。所以这里 FromIterator 也是 IntoIterator 的反义词，表示从迭代器生成对象。这个特质要求一个方法 [from_iter](https://doc.rust-lang.org/std/iter/trait.FromIterator.html#tymethod.from_iter)，在迭代器上调用 collect 的时候实际上调用是这个方法。这些都很正常，没什么可说的。重点是看这个 Option 怎么 FromIterator。可以点进去看内联文档，会发现这个定义稍微有点取巧。实际上 Option 的 collect 功能是把迭代器里面的 Option 提到外面来，文档上说了，只要里面出现 None，外面就是 None，所以它整体差不多是个 all 的意思。这个功能实际上并不是特别常用，有需要的同学可以自己看其中的细节。
+
+## 空指针优化
+
+讲完了复杂的迭代器体系，换一个轻松的话题，讲一讲 Rust 编译器开的一个小洞。Rust 标准库里有一些类型叫做 NonNull NonZero。NonNull 的功能是包装指针，表示一个裸指针非空。NonZero 对于种定点数都有一个对应类型，表示一个整型非零。那这两个东西有什么用呢？非得在标准库里提供两个类型来容纳它们。
+
+我们写这么一个代码来观察一下：
+
+```rust
+macro_rules! print_sizeof {
+    ($ty:ty) => {
+        println!("Size of {} is {}", stringify!($ty), size_of::<$ty>());
+    };
+}
+
+print_sizeof!(*const u8);
+print_sizeof!(Option<*const u8>);
+print_sizeof!(NonNull<u8>);
+print_sizeof!(Option<NonNull<u8>>);
+println!();
+
+print_sizeof!(u8);
+print_sizeof!(Option<u8>);
+print_sizeof!(NonZeroU8);
+print_sizeof!(Option<NonZeroU8>);
+println!();
+
+use std::{num::NonZeroU8, ptr::NonNull};
+```
+
+可以发现，Option 作为 tagged union 实现，需要额外的一份空间来存储标签。所以一般的 Option 都会增大一个对齐的空间。但是套了 NonNull 和 NonZero 之后再 Option，编译器对这种情况做了特殊开洞优化，让这个 Option 利用 NonNull 和 NonZero 不会出现的值存储标签，从而省掉了这个额外开销。
+
+这个行为在[标准库文档](https://doc.rust-lang.org/std/option/index.html#representation)里，实际上不止这两种类型，还有其他一些类型和 Option 配合时可以参与优化。
+
+## 生命周期标注
+
+最后来谈一下生命周期标注的问题。关于生命周期标注的详细信息，记载在 Reference 的[生命周期推断](https://doc.rust-lang.org/reference/lifetime-elision.html)章节中（章节名直译为生命周期省略）。
+
+在 Rust 中，生命周期的标注本质是一个传播或者染色的过程。生命周期标注的本质是为了避免悬垂，也就是释放后使用的问题。因此，每一个引用都需要标注生命周期。而为了供应用到这些引用的场景，生命周期标注就会传染到结构体和特质上。例如，典型的 field reader 实现如下：
+
+```rust
+struct A {
+    a: Vec<i32>,
+}
+
+impl A {
+    pub fn a(&self) -> &[i32] {
+        &self.a
+    }
+}
+```
+
+显然，这个方法实现就是省略生命周期的写法。如果标注，会是这样：
+
+```rust
+pub fn a<'s>(&'s self) -> &'s [i32] {
+    &self.a
+}
+```
+
+另一个例子是在结构体中存储引用时：
+
+```rust
+struct A<'a> {
+    a: &'a [i32],
+}
+
+impl A<'_> {
+    pub fn a(&self) -> &[i32] {
+        self.a
+    }
+}
+```
+
+出现在结构体中的引用同样需要生命周期，为了获得一个正确的生命周期标签，则生命周期标注被传染到结构体定义上。
+
+换句话说，所有引用，无论出现在什么地方，都是隐含生命周期的。只是不同程度上，这些生命周期可以省略。这样看来，生命周期的标注并不复杂。
+
+但是，就好像所有权系统在定义上是用于管理存储，但是实践中管理的是所有基于“获取-使用-释放”三步逻辑的资源。生命周期系统在定义上是用于避免悬垂，而实践中面向的则是任何基于所有权系统的资源的使用阶段。任何资源，只要可以被释放，就可能发生释放后使用的悬垂，也就可以添加生命周期约束，比如典型的锁资源、文件资源。我这里特别想讲一个在推理引擎专用领域使用的特殊资源——加速卡上下文——是如何使用生命周期来保证安全性的。
+
+先说一下加速卡管理的抽象。大家都知道，所谓加速卡，比如显卡，是一种协处理器，功能是向计算机提供算力服务，与计算机的主控系统——CPU，协同工作实现加速。加速卡的功能意味着它有 2 个特点：
+
+1. 加速卡有大量的卡上资源需要映射到 CPU 的环境中，通过 CPU 管理；
+2. 一个 CPU 有可能对应多个加速卡；
+
+因此，CPU 必须引入一种标记，表示当前操作的是哪个加速卡的哪些资源。英伟达采用了一种叫做硬件上下文的标记来实现这个效果。具体来说，就是驱动提供了一套 API，把当前的 CPU 线程与显卡的一个上下文绑定，绑定之后所有在这个线程中进行的卡管理操作都在绑定的上下文上完成。这样，就实现了把多个加速卡的多种资源映射到 CPU 环境的能力。
+
+但是这种设计也带来了一种风险，即所有卡上资源必须在正确的上下文已加载到线程的情况下才能操作。例如，如果在 1 号卡上申请的资源，却被传递到没有加载上下文的线程上使用和释放、或者在当前线程已经重新加载 2 号卡上下文后再使用和释放，就会立即产生异常。那么，在 Rust 中，是否有办法把这种抽象封装为安全的呢？
+
+我们来看 InfiniLM 里如何实现这个抽象。
+
+抽象的核心就是这一块代码：
+
+```rust
+impl Context {
+    #[inline]
+    pub fn apply<T>(&self, f: impl FnOnce(&CurrentCtx) -> T) -> T {
+        driver!(cuCtxPushCurrent_v2(self.ctx));
+        let ans = f(&CurrentCtx(self.ctx));
+        let mut top = null_mut();
+        driver!(cuCtxPopCurrent_v2(&mut top));
+        assert_eq!(top, self.ctx);
+        ans
+    }
+}
+```
+
+这段代码说的是：有一种对象叫做 `Context`，表示一个硬件上下文。但是它本身不提供任何功能，要使用它操作，必须转换成另一种资源，叫做 `CurrentCtx`，也就是当前加载的上下文。而产生 `CurrentCtx` 的唯一方式是调用 `Context::apply` 方法，获得一个具有临时生命周期的 `CurrentCtx` 引用。而凡是基于加载上下文引用产生的资源，全都传递加载上下文引用的生命周期，例如这个显存分配功能：
+
+```rust
+impl CurrentCtx {
+    pub fn malloc<T: Copy>(&self, len: usize) -> DevMem<'_> {
+        let len = Layout::array::<T>(len).unwrap().size();
+        let mut ptr = 0;
+        driver!(cuMemAlloc_v2(&mut ptr, len));
+        DevMem(unsafe { self.wrap_raw(Blob { ptr, len }) }, PhantomData)
+    }
+}
+```
+
+通过这种方式，实现了限制资源的使用绝不超过上下文加载范围的能力。
