@@ -8,3 +8,5 @@
 - [编程语言基础：C++ 题解](20240723-cxx-exercise.md)
 - [编程语言基础：Rust](20240720-rust.md)
 - [编程语言基础：Rust](20240724-rust-grammar.md)
+
+- [AI 程序的抽象](20240806-ai-program.md)
