@@ -1,7 +1,7 @@
 ﻿# 笔记
 
 - [随笔](/随笔/toc.md)
-- [大模型](/大模型/toc.md)
+- [训练营](/训练营/toc.md)
 
 - [翻译](/translation/toc.md)
 - [`zCore`](/zCore)
