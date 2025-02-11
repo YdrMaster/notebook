@@ -16,3 +16,4 @@
   - [入门：张量](20250107-tensor.md)
   - [OpenCL 概述及运行时](20250108-OpenCL.md)
   - [AI 程序的抽象](20250109-ai-program.md)
+  - [MOE](20250211-moe.md)
