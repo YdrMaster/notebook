@@ -17,3 +17,7 @@
   - [OpenCL 概述及运行时](20250108-OpenCL.md)
   - [AI 程序的抽象](20250109-ai-program.md)
   - [MOE](20250211-moe.md)
+
+- 2025 夏季逐字稿
+  - [AI 程序的抽象](20250714-ai-program.md)
+  - [InfiniLM](20250814-InfiniLM.md)
